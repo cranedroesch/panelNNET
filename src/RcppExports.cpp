@@ -6,6 +6,18 @@
 
 using namespace Rcpp;
 
+// eigenMapMatMult
+SEXP eigenMapMatMult(const Eigen::Map<Eigen::MatrixXd> A, Eigen::Map<Eigen::MatrixXd> B);
+RcppExport SEXP _panelNNET_eigenMapMatMult(SEXP ASEXP, SEXP BSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::MatrixXd> >::type A(ASEXP);
+    Rcpp::traits::input_parameter< Eigen::Map<Eigen::MatrixXd> >::type B(BSEXP);
+    rcpp_result_gen = Rcpp::wrap(eigenMapMatMult(A, B));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rcppeigen_hello_world
 Eigen::MatrixXd rcppeigen_hello_world();
 RcppExport SEXP _panelNNET_rcppeigen_hello_world() {
@@ -51,6 +63,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_panelNNET_eigenMapMatMult", (DL_FUNC) &_panelNNET_eigenMapMatMult, 2},
     {"_panelNNET_rcppeigen_hello_world", (DL_FUNC) &_panelNNET_rcppeigen_hello_world, 0},
     {"_panelNNET_rcppeigen_outerproduct", (DL_FUNC) &_panelNNET_rcppeigen_outerproduct, 1},
     {"_panelNNET_rcppeigen_innerproduct", (DL_FUNC) &_panelNNET_rcppeigen_innerproduct, 1},
