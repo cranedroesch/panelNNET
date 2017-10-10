@@ -95,9 +95,12 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       if (i != NL){outer_param <- outer_param[-1,, drop = FALSE]}      #remove parameter on upper-layer bias term
       grad_stubs[[i]] <- activ_prime(lay %*% plist[[i]]) * grad_stubs[[i+1]] %*% Matrix::t(outer_param)
     }
-    #multiply the gradient stubs by their respective layers to get the actual gradients
+    # multiply the gradient stubs by their respective layers to get the actual gradients
+    # first coerce them to regular matrix classes so that the C code for matrix multiplication can speed things up
+    grad_stubs <- lapply(grad_stubs, as.matrix)
+    hlay <- lapply(hlay, as.matrix)
     for (i in 1:length(grad_stubs)){
-      if (i == 1){lay = as.matrix(CB(Xd))} else {lay= as.matrix(CB(hlay[[i-1]]))}
+      if (i == 1){lay = as.matrix(CB(Xd))} else {lay= CB(hlay[[i-1]])}
       if (i != length(grad_stubs) | is.null(fe_var)){# don't add bias term to top layer when there are fixed effects present
         lay <- cbind(1, lay) #add bias to the hidden layer
       }
