@@ -97,9 +97,9 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     }
     #multiply the gradient stubs by their respective layers to get the actual gradients
     for (i in 1:length(grad_stubs)){
-      if (i == 1){lay = CB(Xd)} else {lay= CB(hlay[[i-1]])}
+      if (i == 1){lay = as.matrix(CB(Xd))} else {lay= as.matrix(CB(hlay[[i-1]]))}
       if (i != length(grad_stubs) | is.null(fe_var)){# don't add bias term to top layer when there are fixed effects present
-        lay <- as.matrix(cbind(1, lay)) #add bias to the hidden layer
+        lay <- cbind(1, lay) #add bias to the hidden layer
       }
       grads[[i]] <- eigenMapMatMult(t(lay), as.matrix(grad_stubs[[i]]))
     }
