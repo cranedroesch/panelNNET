@@ -1,4 +1,4 @@
-panelNNET.est <-
+ est.panelNNET <-
 function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parlist
          , verbose, report_interval, gravity, convtol, RMSprop
          , start.LR, activation
@@ -313,7 +313,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       , msevec = msevec, lossvec = lossvec)
     #Start epoch
     #Assign batches
-    batchid <- sample(1:nrow(X)%/%batchsize +1)
+    batchid <- sample(1:nrow(X) %/% batchsize +1)
     if (min(table(batchid))<(batchsize/2)){#Deal with orphan batches
       batchid[batchid == max(batchid)] <- sample(1:(max(batchid) - 1), min(table(batchid)), replace = TRUE)
     }
