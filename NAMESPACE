@@ -2,3 +2,4 @@ useDynLib(panelNNET)
 import(RcppEigen)
 importFrom(Rcpp, evalCpp)
 exportPattern("^[[:alpha:]]+")
+
