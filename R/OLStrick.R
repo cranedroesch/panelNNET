@@ -27,7 +27,7 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
   D[1:length(pp)] <- D[1:length(pp)]*pp #incorporate parapen into diagonal of covmat
   #function to find implicit lambda
   f <- function(lam){
-    bi <- solve(crossprod(Zdm) + diag(D)*lam) %*% t(Zdm) %*% targ
+    bi <- solve(rcppeigen_innerproduct(Zdm) + diag(D)*lam) %*% t(Zdm) %*% targ
     (t(bi*D) %*% (bi*D) - constraint)^2
   }
   #optimize it
@@ -35,7 +35,7 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
   #new lambda
   newlam <- o$par
   #New top-level params
-  b <- solve(crossprod(Zdm) + diag(D)*o$par) %*% t(Zdm) %*% y
+  b <- solve(rcppeigen_innerproduct(Zdm) + diag(D)*o$par) %*% t(Zdm) %*% y
   parlist$beta_param <- b[grepl('param', rownames(b))]
   parlist$beta <- b[grepl('nodes', rownames(b))]
   return(parlist)
