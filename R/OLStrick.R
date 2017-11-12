@@ -1,12 +1,12 @@
 
 
 OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
-#parlist <- pnn$parlist
-#hidden_layers <- pnn$hidden_layers
-#y = pnn$y
-#fe_var <- pnn$fe_var
-#lam <- pnn$lam
-#parapen <- pnn$parapen
+parlist <- pnn1$parlist
+hidden_layers <- pnn1$hidden_layers
+y = pnn1$y
+fe_var <- pnn1$fe_var
+lam <- pnn1$lam
+parapen <- pnn1$parapen
 # hidden_layers <- hlayers
   constraint <- sum(c(parlist$beta_param*parapen, parlist$beta)^2)
   #getting implicit regressors depending on whether regression is panel
@@ -36,8 +36,8 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
   newlam <- o$par
   #New top-level params
   b <- eigenMapMatMult(solve(eigenMapMatMult(t(Zdm),Zdm) + diag(D)*o$par), t(Zdm)) %*% y
-  parlist$beta_param <- b[grepl('param', rownames(b))]
-  parlist$beta <- b[grepl('nodes', rownames(b))]
+  parlist$beta_param <- b[1:length(parlist$beta_param)]
+  parlist$beta <- b[(length(parlist$beta_param)+1):length(b)]
   return(parlist)
 }
 
