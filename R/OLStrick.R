@@ -35,7 +35,7 @@ parapen <- pnn1$parapen
   #new lambda
   newlam <- o$par
   #New top-level params
-  b <- eigenMapMatMult(solve(eigenMapMatMult(t(Zdm),Zdm) + diag(D)*o$par), t(Zdm)) %*% y
+  b <- as.numeric(eigenMapMatMult(solve(eigenMapMatMult(t(Zdm),Zdm) + diag(D)*o$par), t(Zdm)) %*% y)
   parlist$beta_param <- b[1:length(parlist$beta_param)]
   parlist$beta <- b[(length(parlist$beta_param)+1):length(b)]
   return(parlist)
