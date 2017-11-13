@@ -48,10 +48,10 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     #update yhat
     if (!is.null(fe_var)){
       Zdm <- demeanlist(as.matrix(hlay[[length(hlay)]]), list(fe_var))
-      fe <- (y-ydm) - (as.matrix(hlay[[length(hlay)]])-Zdm) %*% as.matrix(c(pl$beta_param, pl$beta))
-      yhat <- hlay[[length(hlay)]] %*% c(pl$beta_param, pl$beta) + fe    
+      fe <- (y-ydm) - MatMult(as.matrix(hlay[[length(hlay)]])-Zdm), as.matrix(c(pl$beta_param, pl$beta)))
+      yhat <- MatMult(hlay[[length(hlay)]], c(pl$beta_param, pl$beta)) + fe    
     } else {
-      yhat <- hlay[[length(hlay)]] %*% c(pl$beta_param, pl$beta)
+      yhat <- MatMult(hlay[[length(hlay)]], c(pl$beta_param, pl$beta))
     }
     return(as.numeric(yhat))
   }
