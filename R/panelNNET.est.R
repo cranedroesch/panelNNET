@@ -5,34 +5,31 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
          , batchsize, maxstopcounter, OLStrick, initialization, dropout_hidden
          , dropout_input, convolutional, ...){
 
-# y = dat$yield
-# X = dat[,grepl('tmax|tmin|wspd|relh|radiation|lat|lon|prc|prop_irr|rotation|tillage|friability',colnames(dat))]
-# param = Xp
-# hidden_units = 10
-# parapen = rep(0, ncol(param))
-# fe_var = dat$reap
-# maxit = 10
-# lam = .1
-# time_var = dat$year
+# y = dat$yield[dat$year %in% samp]
+# X = X[dat$year %in% samp,]
+# hidden_units = hd$HU
+# fe_var = dat$fips[dat$year %in% samp]
+# maxit = 5000
+# lam = hd$lambda
+# time_var = dat$year[dat$year %in% samp]
+# param = Xp[dat$year %in% samp,]
 # verbose = T
-# gravity = 1.01
+# report_interval = 1
+# gravity = 1.1
 # convtol = 1e-5
 # activation = 'lrelu'
-# start_LR = .001
+# start_LR = .01
 # parlist = NULL
-# OLStrick = TRUE
+# OLStrick = T
+# dropout_hidden = hd$drop
+# dropout_input = hd$drop^(log(.8)/log(.5))
 # initialization = 'HZRS'
-# maxit = 100
-# report_interval = 5
 # RMSprop = T
-# start.LR <- .01
-# maxstopcounter <- 10
-# batchsize = nrow(X)
-# dropout_hidden <- dropout_input <- 1
-# datestring <- substr(colnames(X), nchar(colnames(X))-4, nchar(colnames(X)))
-# topology <- as.POSIXlt(datestring, format = "%m_%d")$yday
-# convolutional <- list(Nconv = 5, span = 5, step = 5, topology = topology)
-
+# start.LR <- .001
+# maxstopcounter <- 100
+# batchsize = round(nrow(X)/100)
+# convolutional <- NULL
+# parapen <- rep(1, ncol(Xp))
   
   ##########
   #Define internal functions
@@ -305,12 +302,15 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   D <- 1e6
   stopcounter <- iter <- 0
   msevec <- lossvec <- c()
+  lossvec <- append(lossvec, loss)
+  msevec <- append(msevec, mse)
+  
   ###############
   #start iterating
   while(iter < maxit & stopcounter < maxstopcounter){
-    oldpar <- list(parlist=parlist, hlayers=hlayers, grads=grads
-      , yhat = yhat, mse = mse, mseold = mseold, loss = loss, updates = updates, G2 = G2
-      , msevec = msevec, lossvec = lossvec)
+# oldpar <- list(parlist=parlist, hlayers=hlayers, grads=grads
+#   , yhat = yhat, mse = mse, mseold = mseold, loss = loss, updates = updates, G2 = G2
+#   , msevec = msevec, lossvec = lossvec)
     #Start epoch
     #Assign batches
     batchid <- sample(1:nrow(X) %/% batchsize +1)
@@ -318,6 +318,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       batchid[batchid == max(batchid)] <- sample(1:(max(batchid) - 1), min(table(batchid)), replace = TRUE)
     }
     for (bat in 1:max(batchid)) { # run minibatch
+      iter <- iter + 1
       curBat <- which(batchid == bat)
       hlay <- hlayers#h lay may have experienced dropout, as distinct from hlayers
       # if using dropout, generate a droplist
@@ -409,69 +410,59 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
                               , unlist(sapply(pl_for_lossfun, as.numeric)))^2
       )
       lossvec <- append(lossvec, loss)
-    } #finishes epoch
-
-    #Finished epoch.  Assess whether MSE has increased and revert if so
-    mse <- mean((y-yhat)^2)
-    loss <- mse + lam*sum(c(parlist$beta_param*parapen
-                            , parlist$beta
-                            , unlist(sapply(pl_for_lossfun, as.numeric)))^2
-    )
-    #If loss increases...
-    if (oldpar$loss <= loss){
-      parlist <- oldpar$parlist
-      updates <- oldpar$updates
-      G2 <- oldpar$G2
-      hlayers <- oldpar$hlayers
-      grads <- oldpar$grads
-      yhat <- oldpar$yhat
-      mse <- oldpar$mse
-      stopcounter <- stopcounter + 1
-      loss <- oldpar$loss
-      msevec <- oldpar$msevec
-      lossvec <- oldpar$lossvec
-      LR <- LR/2
-      if(verbose == TRUE){
-        print(paste0("Loss increased.  halving LR.  Stopcounter now at ", stopcounter))
+      # depending on whether loss decreases, increase or decrease learning rate
+      oldloss <- lossvec[length(lossvec)-1]
+      oldmse <- msevec[length(msevec)-1]
+      if (oldloss <= loss){
+        LR <- LR/gravity^2
+        stopcounter <- stopcounter + 1
+        if(verbose == TRUE){
+          print(paste0("Loss increased.  Stopcounter now at ", stopcounter))
+        }
+      } else { # if loss doesn't increase
+        LR <- LR*gravity      #gravity...
+        # check for convergence
+        D <- oldloss - loss
+        if (D < convtol){
+          stopcounter <- stopcounter + 1
+          if(verbose == TRUE){print(paste('slowing!  Stopcounter now at ', stopcounter))}
+        } else { # reset stopcounter if not slowing per convergence tolerance
+          stopcounter <- 0
+        }
       }
-    } else { # if loss doesn't increase
-      LRvec[iter+1] <- LR <- LR*gravity      #gravity...
-      D <- oldpar$loss - loss
-      if (D < convtol){
-        stopcounter <- stopcounter +1
-        if(verbose == TRUE){print(paste('slowing!  Stopcounter now at ', stopcounter))}
-      } else { # reset stopcounter if not slowing per convergence tolerance
-        stopcounter <-0
-      }
+      LRvec[iter+1] <- LR
+      # verbosity
       if  (verbose == TRUE & iter %% report_interval == 0){
         writeLines(paste0(
           "*******************************************\n"
           , 'Lambda = ',lam, "\n"
           , "Hidden units -> ",paste(hidden_units, collapse = ' '), "\n"
           , " Batch size is ", batchsize, " \n"
-          , " Completed ", iter, " epochs. \n"
+          , " Completed ", iter %/% max(batchid), " epochs. \n"
           , " Completed ", bat, " batches in current epoch. \n"
           , "mse is ",mse, "\n"
-          , "last mse was ", oldpar$mse, "\n"
-          , "difference is ", oldpar$mse - mse, "\n"
+          , "last mse was ", oldmse, "\n"
+          , "difference is ", oldmse - mse, "\n"
           , "loss is ",loss, "\n"
-          , "last loss was ", oldpar$loss, "\n"
-          , "difference is ", oldpar$loss - loss, "\n"
+          , "last loss was ", oldloss, "\n"
+          , "difference is ", oldloss - loss, "\n"
           , "input layer dropout probability: ", dropout_input, "\n"
           , "hidden layer dropout probability: ", dropout_hidden, "\n"
           , "*******************************************\n"  
         ))
         par(mfrow = c(3,2))
-        plot(y, yhat, col = rgb(1,0,0,.5), pch = 19, main = 'in-sample performance')
-        abline(0,1)
-        plot(LRvec, type = 'b', main = 'learning rate history')
+        if(length(y)>5000){
+          plot(1, cex = 0, main = "more than 5000 obs -- not plotting scatter")
+        } else {
+          plot(y, yhat, col = rgb(1,0,0,.5), pch = 19, main = 'in-sample performance')          
+        }
+        plot(LRvec, type = 'l', main = 'learning rate history')
         plot(msevec, type = 'l', main = 'all epochs', ylim = range(c(msevec), na.rm = TRUE))
-        plot(msevec[(1+(iter)*max(batchid)):length(msevec)], type = 'l', ylab = 'mse', main = 'Current epoch')
+        plot(msevec[pmax(1, length(msevec)-100):length(msevec)], type = 'l', ylab = 'mse', main = 'Last 100')
         plot(lossvec, type = 'l', main = 'all epochs')
-        plot(lossvec[(1+(iter)*max(batchid)):length(lossvec)], type = 'l', ylab = 'loss', main = 'Current epoch')
+        plot(lossvec[pmax(1, length(lossvec)-100):length(lossvec)], type = 'l', ylab = 'loss', main = 'Last 100')
       } # fi verbose 
-    } # fi if loss increases 
-    iter <- iter+1
+    } #finishes epoch
   } #closes the while loop
   #If trained with dropput, weight the layers by expectations
   if(dropout_hidden<1){
