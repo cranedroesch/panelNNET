@@ -1,6 +1,6 @@
 panelNNET.default <-
 function(y, X, hidden_units, fe_var
-  , maxit = 100, lam = 0, time_var = NULL, param = NULL
+  , maxit, lam = 0, time_var = NULL, param = NULL
   , parapen = rep(0, ncol(param)), parlist = NULL, verbose = FALSE
   , report_interval = 100
   , gravity = 1.01, convtol = 1e-8, RMSprop = TRUE, start_LR = .01
