@@ -450,17 +450,19 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
           , "hidden layer dropout probability: ", dropout_hidden, "\n"
           , "*******************************************\n"  
         ))
-        par(mfrow = c(3,2))
-        if(length(y)>5000){
-          plot(1, cex = 0, main = "more than 5000 obs -- not plotting scatter")
-        } else {
-          plot(y, yhat, col = rgb(1,0,0,.5), pch = 19, main = 'in-sample performance')          
+        if (iter>1){
+          par(mfrow = c(3,2))
+          if(length(y)>5000){
+            plot(1, cex = 0, main = "more than 5000 obs -- not plotting scatter")
+          } else {
+            plot(y, yhat, col = rgb(1,0,0,.5), pch = 19, main = 'in-sample performance')          
+          }
+          plot(LRvec, type = 'l', main = 'learning rate history')
+          plot(msevec[-1], type = 'l', main = 'MSE history', ylim = range(c(msevec), na.rm = TRUE))
+          plot(msevec[pmax(1, length(msevec)-100):length(msevec)], type = 'l', ylab = 'mse', main = 'Last 100')
+          plot(lossvec[-1], type = 'l', main = 'Loss history')
+          plot(lossvec[pmax(1, length(lossvec)-100):length(lossvec)], type = 'l', ylab = 'loss', main = 'Last 100')
         }
-        plot(LRvec, type = 'l', main = 'learning rate history')
-        plot(msevec, type = 'l', main = 'all epochs', ylim = range(c(msevec), na.rm = TRUE))
-        plot(msevec[pmax(1, length(msevec)-100):length(msevec)], type = 'l', ylab = 'mse', main = 'Last 100')
-        plot(lossvec, type = 'l', main = 'all epochs')
-        plot(lossvec[pmax(1, length(lossvec)-100):length(lossvec)], type = 'l', ylab = 'loss', main = 'Last 100')
       } # fi verbose 
     } #finishes epoch
   } #closes the while loop
