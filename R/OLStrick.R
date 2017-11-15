@@ -42,5 +42,3 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
 }
 
 
-#mean((targ - Zdm %*% c(parlist$beta_param, parlist$beta))^2)
-#mean((targ - Zdm %*% b)^2)
