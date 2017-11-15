@@ -42,8 +42,9 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
 }
 
 
-
-
+dd <- as.data.frame(Zdm)
+plot(dd[,5:15])
+Zdm <-scale(Zdm)
 
 #mean((targ - Zdm %*% c(parlist$beta_param, parlist$beta))^2)
 #mean((targ - Zdm %*% b)^2)
