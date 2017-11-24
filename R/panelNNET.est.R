@@ -171,7 +171,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   ###########################
   if (gravity <= 1){stop("Gravity must be >1")}
   if (start.LR <= 0){stop("Learning rate must be positive")}
-  if (LR_slowing_rate <= 1){stop("LR_slowing_rate must larger than 1")}
+  # if (LR_slowing_rate <= 1){stop("LR_slowing_rate must larger than 1")}
   ###########################
   # start fitting
   ###########################
@@ -418,7 +418,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       oldloss <- lossvec[length(lossvec)]
       oldmse <- msevec[length(msevec)]
       if (oldloss <= loss){
-        LR <- LR/gravity^LR_slowing_rate
+        LR <- LR*LR_slowing_rate
         stopcounter <- stopcounter + 1
         if(verbose == TRUE){
           print(paste0("Loss increased.  Stopcounter now at ", stopcounter))
