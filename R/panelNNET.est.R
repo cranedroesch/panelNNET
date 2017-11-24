@@ -3,33 +3,34 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
          , verbose, report_interval, gravity, convtol, RMSprop
          , start.LR, activation
          , batchsize, maxstopcounter, OLStrick, initialization, dropout_hidden
-         , dropout_input, convolutional, ...){
+         , dropout_input, convolutional, LR_slowing_rate, ...){
 
-# y = dat$yield[dat$year %in% samp]
-# X = X[dat$year %in% samp,]
-# hidden_units = hd$HU
-# fe_var = dat$fips[dat$year %in% samp]
-# maxit = 5000
-# lam = hd$lambda
-# time_var = dat$year[dat$year %in% samp]
-# param = Xp[dat$year %in% samp,]
-# verbose = T
-# report_interval = 1
-# gravity = 1.1
-# convtol = 1e-5
-# activation = 'lrelu'
-# start_LR = .01
-# parlist = NULL
-# OLStrick = T
-# dropout_hidden = hd$drop
-# dropout_input = hd$drop^(log(.8)/log(.5))
-# initialization = 'HZRS'
-# RMSprop = T
-# start.LR <- .001
-# maxstopcounter <- 100
-# batchsize = round(nrow(X)/100)
-# convolutional <- NULL
-# parapen <- rep(1, ncol(Xp))
+y = dat$yield
+X = X
+hidden_units = 10
+fe_var = dat$fips
+maxit = 5000
+lam = 2
+time_var = dat$year
+param = Xp
+verbose = T
+report_interval = 1
+gravity = 1.1
+convtol = 1e-5
+activation = 'lrelu'
+start_LR = .01
+parlist = NULL
+OLStrick = T
+dropout_hidden = 1
+dropout_input = 1^(log(.8)/log(.5))
+initialization = 'HZRS'
+RMSprop = T
+start.LR <- .001
+maxstopcounter <- 10
+batchsize = round(nrow(X)/100)
+convolutional <- NULL
+parapen <- rep(1, ncol(Xp))
+LR_slowing_rate <- 2
   
   ##########
   #Define internal functions
@@ -165,6 +166,12 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     return(Matrix(cbind(TV, NTV)))
   }
   
+  ###########################
+  # sanity checks.  here place checks to ensure that arguments supplied will yield sensible output
+  ###########################
+  if (gravity <= 1){stop("Gravity must be >1")}
+  if (LR <= 0){stop("Learning rate must be positive")}
+  if (LR_slowing_rate <= 1){stop("LR_slowing_rate must larger than 1")}
   ###########################
   # start fitting
   ###########################
@@ -308,10 +315,9 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   ###############
   #start iterating
   while(iter < maxit & stopcounter < maxstopcounter){
-# oldpar <- list(parlist=parlist, hlayers=hlayers, grads=grads
-#   , yhat = yhat, mse = mse, mseold = mseold, loss = loss, updates = updates, G2 = G2
-#   , msevec = msevec, lossvec = lossvec)
     #Start epoch
+    parlist_at_epoch_start <- parlist
+    loss_at_epoch_start <- lossvec[length(lossvec)]
     #Assign batches
     batchid <- sample(1:nrow(X) %/% batchsize +1)
     if (min(table(batchid))<(batchsize/2)){#Deal with orphan batches
@@ -387,12 +393,11 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       # OLS trick!
       if (OLStrick == TRUE){
         parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
-          , fe_var = fe_var, lam = lam, parapen = parapen)
+                                     , fe_var = fe_var, lam = lam, parapen = parapen)
       }
       #update yhat
       yhat <- getYhat(parlist, hlay = hlayers)
       mse <- mean((y-yhat)^2)
-      msevec <- append(msevec, mse)
       pl_for_lossfun <- parlist[!grepl('beta', names(parlist))]
       if (!is.null(convolutional)){ # coerce the convolutional parameters to a couple of vectors to avoid double-counting in the loss
         convolutional$convParms <- foreach(i = 1:convolutional$Nconv) %do% {
@@ -409,18 +414,19 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
                               , parlist$beta
                               , unlist(sapply(pl_for_lossfun, as.numeric)))^2
       )
-      lossvec <- append(lossvec, loss)
       # depending on whether loss decreases, increase or decrease learning rate
-      oldloss <- lossvec[length(lossvec)-1]
-      oldmse <- msevec[length(msevec)-1]
+      oldloss <- lossvec[length(lossvec)]
+      oldmse <- msevec[length(msevec)]
       if (oldloss <= loss){
-        LR <- LR/gravity^2
+        LR <- LR/gravity^LR_slowing_rate
         stopcounter <- stopcounter + 1
         if(verbose == TRUE){
           print(paste0("Loss increased.  Stopcounter now at ", stopcounter))
         }
       } else { # if loss doesn't increase
         LR <- LR*gravity      #gravity...
+        lossvec <- append(lossvec, loss)
+        msevec <- append(msevec, mse)
         # check for convergence
         D <- oldloss - loss
         if (D < convtol){
@@ -429,7 +435,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
         } else { # reset stopcounter if not slowing per convergence tolerance
           stopcounter <- 0
         }
-      }
+      }        
       LRvec[iter+1] <- LR
       # verbosity
       if  (verbose == TRUE & iter %% report_interval == 0){
@@ -464,6 +470,12 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
           plot(lossvec[pmax(2, length(lossvec)-100):length(lossvec)], type = 'l', ylab = 'loss', main = 'Last 100')
         }
       } # fi verbose 
+      if (lossvec[length(lossvec)] > loss_at_epoch_start){
+        parlist <- parlist_at_epoch_start
+        if(verbose == TRUE){
+          print("restarted parlist to epoch start value")
+        }
+      }
     } #finishes epoch
   } #closes the while loop
   #If trained with dropput, weight the layers by expectations
