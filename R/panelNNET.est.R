@@ -5,32 +5,32 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
          , batchsize, maxstopcounter, OLStrick, initialization, dropout_hidden
          , dropout_input, convolutional, LR_slowing_rate, ...){
 
-y = dat$yield
-X = X
-hidden_units = 10
-fe_var = dat$fips
-maxit = 5000
-lam = 2
-time_var = dat$year
-param = Xp
-verbose = T
-report_interval = 1
-gravity = 1.1
-convtol = 1e-5
-activation = 'lrelu'
-start_LR = .01
-parlist = NULL
-OLStrick = T
-dropout_hidden = 1
-dropout_input = 1^(log(.8)/log(.5))
-initialization = 'HZRS'
-RMSprop = T
-start.LR <- .001
-maxstopcounter <- 10
-batchsize = round(nrow(X)/100)
-convolutional <- NULL
-parapen <- rep(1, ncol(Xp))
-LR_slowing_rate <- 2
+# y = dat$yield
+# X = X
+# hidden_units = 10
+# fe_var = dat$fips
+# maxit = 5000
+# lam = 2
+# time_var = dat$year
+# param = Xp
+# verbose = T
+# report_interval = 1
+# gravity = 1.1
+# convtol = 1e-5
+# activation = 'lrelu'
+# start_LR = .01
+# parlist = NULL
+# OLStrick = T
+# dropout_hidden = 1
+# dropout_input = 1^(log(.8)/log(.5))
+# initialization = 'HZRS'
+# RMSprop = T
+# start.LR <- .001
+# maxstopcounter <- 10
+# batchsize = round(nrow(X)/100)
+# convolutional <- NULL
+# parapen <- rep(1, ncol(Xp))
+# LR_slowing_rate <- 2
   
   ##########
   #Define internal functions
