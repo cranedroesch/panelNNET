@@ -313,13 +313,11 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   msevec <- lossvec <- c()
   lossvec <- append(lossvec, loss)
   msevec <- append(msevec, mse)
-  
+  parlist_best <- parlist
   ###############
   #start iterating
   while(iter < maxit & stopcounter < maxstopcounter){
     #Start epoch
-    parlist_at_epoch_start <- parlist
-    loss_at_epoch_start <- lossvec[length(lossvec)]
     #Assign batches
     batchid <- sample(1:nrow(X) %/% batchsize +1)
     if (min(table(batchid))<(batchsize/2)){#Deal with orphan batches
@@ -416,19 +414,24 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
                               , parlist$beta
                               , unlist(sapply(pl_for_lossfun, as.numeric)))^2
       )
-      # depending on whether loss decreases, increase or decrease learning rate
       oldloss <- lossvec[length(lossvec)]
       oldmse <- msevec[length(msevec)]
+      lossvec <- append(lossvec, loss)
+      msevec <- append(msevec, mse)
+      # if achieving a new minimum, stash parlist in parlist_best
+      if (loss == min(lossvec)){
+        parlist_best <- parlist
+      }
+      # depending on whether loss decreases, increase or decrease learning rate
       if (oldloss <= loss){
-        LR <- LR*LR_slowing_rate
+        LR <- LR/gravity^LR_slowing_rate
         stopcounter <- stopcounter + 1
         if(verbose == TRUE){
           print(paste0("Loss increased.  Stopcounter now at ", stopcounter))
         }
       } else { # if loss doesn't increase
         LR <- LR*gravity      #gravity...
-        lossvec <- append(lossvec, loss)
-        msevec <- append(msevec, mse)
+
         # check for convergence
         D <- oldloss - loss
         if (D < convtol){
@@ -474,14 +477,16 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
           }
         }
       } # fi verbose 
-      if (lossvec[length(lossvec)] > loss_at_epoch_start){
-        parlist <- parlist_at_epoch_start
-        if(verbose == TRUE){
-          print("restarted parlist to epoch start value")
-        }
+      if(iter > maxit | stopcounter > maxstopcounter){
+        break
       }
     } #finishes epoch
   } #closes the while loop
+  # revert to parlist_best
+  parlist <- parlist_best
+  hlayers <- calc_hlayers(parlist, X = X, param = param,
+                          fe_var = fe_var, nlayers = nlayers,
+                          convolutional = convolutional, activ = activation)
   #If trained with dropput, weight the layers by expectations
   if(dropout_hidden<1){
     for (i in nlayers:1){
@@ -500,8 +505,26 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     hlayers <- calc_hlayers(parlist, X = X, param = param,
                             fe_var = fe_var, nlayers = nlayers,
                             convolutional = convolutional, activ = activation)
-    yhat <- getYhat(parlist, hlay = hlayers)
   }
+  # final values...
+  yhat <- getYhat(parlist, hlay = hlayers)
+  mse <- mean((y-yhat)^2)
+  pl_for_lossfun <- parlist[!grepl('beta', names(parlist))]
+  if (!is.null(convolutional)){ # coerce the convolutional parameters to a couple of vectors to avoid double-counting in the loss
+    convolutional$convParms <- foreach(i = 1:convolutional$Nconv) %do% {
+      idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
+      rowMeans(foreach(j = idx, .combine = cbind) %do% {x <- pl_for_lossfun[[1]][,j]; x[x!=0][-1]})
+    }
+    convolutional$convBias <- foreach(i = 1:convolutional$Nconv, .combine = c) %do% {
+      idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
+      mean(pl_for_lossfun[[1]][1,idx])
+    }
+    pl_for_lossfun[[1]] <- c(unlist(convolutional$convParms, convolutional$convBias))
+  }
+  loss <- mse + lam*sum(c(parlist$beta_param*parapen
+                          , parlist$beta
+                          , unlist(sapply(pl_for_lossfun, as.numeric)))^2
+  )
   conv <- (iter < maxit)#Did we get convergence?
   if(is.null(fe_var)){
     fe_output <- NULL
@@ -516,12 +539,15 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   output <- list(yhat = yhat, parlist = parlist, hidden_layers = hlayers
     , fe = fe_output, converged = conv, mse = mse, loss = loss, lam = lam, time_var = time_var
     , X = X, y = y, param = param, fe_var = fe_var, hidden_units = hidden_units, maxit = maxit
-    , final_improvement = D, msevec = msevec, RMSprop = RMSprop, convtol = convtol
+    , msevec = msevec, RMSprop = RMSprop, convtol = convtol
     , grads = grads, activation = activation, parapen = parapen
     , batchsize = batchsize, initialization = initialization, convolutional = convolutional
     , dropout_hidden = dropout_hidden, dropout_input = dropout_input)
   return(output) # list 
 }
+
+
+
 
 
 
