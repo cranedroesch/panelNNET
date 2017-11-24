@@ -170,7 +170,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   # sanity checks.  here place checks to ensure that arguments supplied will yield sensible output
   ###########################
   if (gravity <= 1){stop("Gravity must be >1")}
-  if (LR <= 0){stop("Learning rate must be positive")}
+  if (start.LR <= 0){stop("Learning rate must be positive")}
   if (LR_slowing_rate <= 1){stop("LR_slowing_rate must larger than 1")}
   ###########################
   # start fitting
