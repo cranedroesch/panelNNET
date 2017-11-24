@@ -202,8 +202,10 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     # set set the topology to start at 1, if it isn't already there.  give a warning if it isn't.
     if (min(convolutional$topology, na.rm =T)>1){
       convolutional$topology <- convolutional$topology - min(convolutional$topology, na.rm =T) +1 
-      print("minimum value in supplied topology greater than 1.  subtracting to get it to start at 1.")
-      warning("minimum value in supplied topology greater than 1.  subtracting to get it to start at 1.")
+      if (verbose == TRUE){
+        print("minimum value in supplied topology greater than 1.  subtracting to get it to start at 1.")
+        warning("minimum value in supplied topology greater than 1.  subtracting to get it to start at 1.")
+      }
     }
     # make the convolutional masking matrix if using conv nets
     convMask <- convolutional$convmask <- makeMask(X, convolutional$topology, convolutional$span, convolutional$step, convolutional$Nconv)
