@@ -466,7 +466,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
           plot(LRvec, type = 'l', main = 'learning rate history')
           print(msevec)
           print(lossvec)
-          if(length(msevec>1)){
+          if(length(msevec)>1){
             plot(msevec[-1], type = 'l', main = 'MSE history')
             plot(msevec[pmax(2, length(msevec)-100):length(msevec)], type = 'l', ylab = 'mse', main = 'Last 100')
             plot(lossvec[-1], type = 'l', main = 'Loss history')
