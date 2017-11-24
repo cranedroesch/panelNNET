@@ -17,7 +17,3 @@ MatMult <- function(A, B){
     A %*% B
   }
 }
-
-mse <- function(y, yhat){
-  mean((y-yhat)^2)
-}
