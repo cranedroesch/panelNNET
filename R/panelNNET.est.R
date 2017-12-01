@@ -487,25 +487,25 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   hlayers <- calc_hlayers(parlist, X = X, param = param,
                           fe_var = fe_var, nlayers = nlayers,
                           convolutional = convolutional, activ = activation)
-  #If trained with dropput, weight the layers by expectations
-  if(dropout_hidden<1){
-    for (i in nlayers:1){
-      if (i == 1){
-        parlist[[i]] <- parlist[[i]] * dropout_input
-      } else {
-        parlist[[i]] <- parlist[[i]] * dropout_hidden
-      }
-    }
-    parlist$beta <- parlist$beta * dropout_hidden
-    if (OLStrick == TRUE){
-      parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
-        , fe_var = fe_var, lam = lam, parapen = parapen)
-    }
-    #redo the hidden layers based on the new parlist
-    hlayers <- calc_hlayers(parlist, X = X, param = param,
-                            fe_var = fe_var, nlayers = nlayers,
-                            convolutional = convolutional, activ = activation)
-  }
+  # #If trained with dropput, weight the layers by expectations
+  # if(dropout_hidden<1){
+  #   for (i in nlayers:1){
+  #     if (i == 1){
+  #       parlist[[i]] <- parlist[[i]] * dropout_input
+  #     } else {
+  #       parlist[[i]] <- parlist[[i]] * dropout_hidden
+  #     }
+  #   }
+  #   parlist$beta <- parlist$beta * dropout_hidden
+  #   if (OLStrick == TRUE){
+  #     parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
+  #       , fe_var = fe_var, lam = lam, parapen = parapen)
+  #   }
+  #   #redo the hidden layers based on the new parlist
+  #   hlayers <- calc_hlayers(parlist, X = X, param = param,
+  #                           fe_var = fe_var, nlayers = nlayers,
+  #                           convolutional = convolutional, activ = activation)
+  # }
   # final values...
   yhat <- getYhat(parlist, hlay = hlayers)
   mse <- mean((y-yhat)^2)
