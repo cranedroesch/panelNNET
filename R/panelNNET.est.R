@@ -422,6 +422,15 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       if (loss == min(lossvec)){
         parlist_best <- parlist
       }
+bestloss <- which.min(lossvec)
+print("bestloss")
+print(bestloss)
+print("lossvec since bestloss")
+print(lossvec[bestloss:length(lossvec)])
+print("condition")
+print(length(lossvec[bestloss:length(lossvec)]) - bestloss)
+print("> maxit*3")
+print(length(lossvec[bestloss:length(lossvec)]) - bestloss > maxit*3)
       # depending on whether loss decreases, increase or decrease learning rate
       if (oldloss <= loss){
         LR <- LR/gravity^LR_slowing_rate
@@ -441,14 +450,6 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
           stopcounter <- 0
           # check and see if loss has been up for a while
           bestloss <- which.min(lossvec)
-print("bestloss")
-print(bestloss)
-print("lossvec since bestloss")
-print(lossvec[bestloss:length(lossvec)])
-print("condition")
-print(length(lossvec[bestloss:length(lossvec)]) - bestloss)
-print("> maxit*3")
-print(length(lossvec[bestloss:length(lossvec)]) - bestloss > maxit*3)
           if(length(lossvec[bestloss:length(lossvec)]) - bestloss > maxit*3){
             if(verbose == TRUE){
               print("loss been above minimum for > 3*maxit")
