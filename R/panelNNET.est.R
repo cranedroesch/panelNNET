@@ -461,23 +461,23 @@ print(length(lossvec[bestloss:length(lossvec)]) - bestloss > maxit*3)
       LRvec[iter+1] <- LR
       # verbosity
       if  (verbose == TRUE & iter %% report_interval == 0){
-        writeLines(paste0(
-          "*******************************************\n"
-          , 'Lambda = ',lam, "\n"
-          , "Hidden units -> ",paste(hidden_units, collapse = ' '), "\n"
-          , " Batch size is ", batchsize, " \n"
-          , " Completed ", iter %/% max(batchid), " epochs. \n"
-          , " Completed ", bat, " batches in current epoch. \n"
-          , "mse is ",mse, "\n"
-          , "last mse was ", oldmse, "\n"
-          , "difference is ", oldmse - mse, "\n"
-          , "loss is ",loss, "\n"
-          , "last loss was ", oldloss, "\n"
-          , "difference is ", oldloss - loss, "\n"
-          , "input layer dropout probability: ", dropout_input, "\n"
-          , "hidden layer dropout probability: ", dropout_hidden, "\n"
-          , "*******************************************\n"  
-        ))
+#        writeLines(paste0(
+#          "*******************************************\n"
+#          , 'Lambda = ',lam, "\n"
+#          , "Hidden units -> ",paste(hidden_units, collapse = ' '), "\n"
+#          , " Batch size is ", batchsize, " \n"
+#          , " Completed ", iter %/% max(batchid), " epochs. \n"
+#          , " Completed ", bat, " batches in current epoch. \n"
+#          , "mse is ",mse, "\n"
+#          , "last mse was ", oldmse, "\n"
+#          , "difference is ", oldmse - mse, "\n"
+#          , "loss is ",loss, "\n"
+#          , "last loss was ", oldloss, "\n"
+#          , "difference is ", oldloss - loss, "\n"
+#          , "input layer dropout probability: ", dropout_input, "\n"
+#          , "hidden layer dropout probability: ", dropout_hidden, "\n"
+#          , "*******************************************\n"  
+#        ))
         if (iter>1){
           par(mfrow = c(3,2))
           if(length(y)>5000){
