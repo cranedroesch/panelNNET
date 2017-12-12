@@ -5,32 +5,37 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
          , batchsize, maxstopcounter, OLStrick, initialization, dropout_hidden
          , dropout_input, convolutional, LR_slowing_rate, ...){
 
-# y = dat$yield
-# X = X
-# hidden_units = 10
-# fe_var = dat$fips
-# maxit = 5000
-# lam = 2
-# time_var = dat$year
-# param = Xp
-# verbose = T
-# report_interval = 1
-# gravity = 1.1
-# convtol = 1e-5
-# activation = 'lrelu'
-# start_LR = .01
-# parlist = NULL
-# OLStrick = T
-# dropout_hidden = 1
-# dropout_input = 1^(log(.8)/log(.5))
-# initialization = 'HZRS'
-# RMSprop = T
-# start.LR <- .001
-# maxstopcounter <- 10
-# batchsize = round(nrow(X)/100)
-# convolutional <- NULL
-# parapen <- rep(1, ncol(Xp))
-# LR_slowing_rate <- 2
+  
+  # y = dat$logyield[dat$year %in% samp]
+  # X = X[dat$year %in% samp,]
+  # hidden_units = rep(100, 10)
+  # fe_var = dat$fips[dat$year %in% samp]
+  # maxit = 300
+  # lam = lam
+  # time_var = dat$year[dat$year %in% samp]
+  # param = Xp[dat$year %in% samp,]
+  # verbose = F
+  # report_interval = 1
+  # gravity = 1.1
+  # convtol = 1e-4
+  # activation = 'lrelu'
+  # start_LR = .001
+  # parlist = parlist 
+  # OLStrick = TRUE
+  # batchsize = batchsize
+  # maxstopcounter = 10
+  # dropout_hidden = D
+  # dropout_input = D^(log(.8)/log(.5))
+  # parapen = c(0,0,rep(1, ncol(Xp)-2))
+  # initialization = 'HZRS'
+  # RMSprop = T
+  # start.LR <- .001
+  # maxstopcounter <- 10
+  # batchsize = round(nrow(X)/100)
+  # convolutional <- NULL
+  # parapen <- rep(1, ncol(Xp))
+  # LR_slowing_rate <- 2
+  # gravity = 1.1
   
   ##########
   #Define internal functions
@@ -395,6 +400,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
         parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
                                      , fe_var = fe_var, lam = lam, parapen = parapen)
       }
+
       #update yhat
       yhat <- getYhat(parlist, hlay = hlayers)
       mse <- mean((y-yhat)^2)
@@ -441,7 +447,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
           stopcounter <- 0
           # check and see if loss has been up for a while
           bestloss <- which.min(lossvec)
-          if(length(lossvec[bestloss:length(lossvec)]) - bestloss > maxstopcounter*2){
+          if(length(lossvec) - bestloss > maxstopcounter*2){
             if(verbose == TRUE){
               print("loss been above minimum for > 2*maxstopcounter")
             }
