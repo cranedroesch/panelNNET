@@ -36,9 +36,9 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
   # newlam <- o$par
   # new way:
   b <- c(parlist$beta_param, parlist$beta)
-  newlam <-   1/constraint * MatMult(t(b), (MatMult(t(Zdm), ydm) - MatMult(MatMult(t(Zdm), Zdm),b)))
+  newlam <-   1/constraint * MatMult(t(b), (MatMult(t(Zdm), targ) - MatMult(MatMult(t(Zdm), Zdm),b)))
   #New top-level params
-  b <- as.numeric(MatMult(MatMult(solve(MatMult(t(Zdm),Zdm) + diag(D)*as.numeric(newlam)), t(Zdm)), y))
+  b <- as.numeric(MatMult(MatMult(solve(MatMult(t(Zdm),Zdm) + diag(D)*as.numeric(newlam)), t(Zdm)), targ))
   parlist$beta_param <- b[1:length(parlist$beta_param)]
   parlist$beta <- b[(length(parlist$beta_param)+1):length(b)]
   return(parlist)
