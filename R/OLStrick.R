@@ -1,12 +1,12 @@
 
 
 OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
-# parlist <- pnn1$parlist
-# hidden_layers <- pnn1$hidden_layers
-# y = pnn1$y
-# fe_var <- pnn1$fe_var
-# lam <- pnn1$lam
-# parapen <- pnn1$parapen
+parlist <- pnn$parlist
+hidden_layers <- pnn$hidden_layers
+y = pnn$y
+fe_var <- pnn$fe_var
+lam <- pnn$lam
+parapen <- pnn$parapen
 # hidden_layers <- hlayers
   constraint <- sum(c(parlist$beta_param*parapen, parlist$beta)^2)
   #getting implicit regressors depending on whether regression is panel
@@ -26,16 +26,19 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
   }
   D[1:length(pp)] <- D[1:length(pp)]*pp #incorporate parapen into diagonal of covmat
   #function to find implicit lambda
-  f <- function(lam){
-    bi <- eigenMapMatMult(solve(eigenMapMatMult(t(Zdm),Zdm) + diag(D)*lam), t(Zdm)) %*% targ
-    (t(bi*D) %*% (bi*D) - constraint)^2
-  }
-  #optimize it
-  o <- optim(par = lam, f = f, method = 'Brent', lower = lam, upper = 1e9)
-  #new lambda
-  newlam <- o$par
+  # f <- function(lam){
+  #   bi <- eigenMapMatMult(solve(eigenMapMatMult(t(Zdm),Zdm) + diag(D)*lam), t(Zdm)) %*% targ
+  #   (t(bi*D) %*% (bi*D) - constraint)^2
+  # }
+  # #optimize it
+  # o <- optim(par = lam, f = f, method = 'Brent', lower = lam, upper = 1e9)
+  # #new lambda
+  # newlam <- o$par
+  # new way:
+  b <- c(parlist$beta_param, parlist$beta)
+  newlam <-   1/constraint * MatMult(t(b), (MatMult(t(Zdm), ydm) - MatMult(MatMult(t(Zdm), Zdm),b)))
   #New top-level params
-  b <- as.numeric(eigenMapMatMult(solve(eigenMapMatMult(t(Zdm),Zdm) + diag(D)*o$par), t(Zdm)) %*% y)
+  b <- as.numeric(MatMult(MatMult(solve(MatMult(t(Zdm),Zdm) + diag(D)*as.numeric(newlam)), t(Zdm)), y))
   parlist$beta_param <- b[1:length(parlist$beta_param)]
   parlist$beta <- b[(length(parlist$beta_param)+1):length(b)]
   return(parlist)
