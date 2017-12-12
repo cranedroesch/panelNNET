@@ -29,15 +29,18 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
   newlam <-   1/constraint * MatMult(t(b), (MatMult(t(Zdm), targ) - MatMult(MatMult(t(Zdm), Zdm),b)))
   newlam <- max(lam, newlam) #dealing with the case where you're not constrained
   #New top-level params
-  DBG <<- list(Zdm = Zdm,
-               D = D,
-               newlam = newlam,
-               targ = targ)
-  b <- as.numeric(MatMult(MatMult(solve(MatMult(t(Zdm),Zdm) + diag(D)*as.numeric(newlam)), t(Zdm)), targ))
+  b <- tryCatch(as.numeric(MatMult(MatMult(solve(MatMult(t(Zdm),Zdm) + diag(D)*as.numeric(newlam)), t(Zdm)), targ)),
+                error = function(e)e)
+  if (inherits(b, "error")){
+    b <- as.numeric(MatMult(MatMult(ginv(MatMult(t(Zdm),Zdm) + diag(D)*as.numeric(newlam)), t(Zdm)), targ))
+  }
   parlist$beta_param <- b[1:length(parlist$beta_param)]
   parlist$beta <- b[(length(parlist$beta_param)+1):length(b)]
   return(parlist)
 }
+
+
+
 
 
 OLStrick_function_old <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
