@@ -294,7 +294,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   if (!is.null(convolutional)){
     pl_for_lossfun[[1]] <- unlist(c(convolutional$convParms, convolutional$convBias))
   }
-  loss <- mse + lam*sum(c(parlist$beta_param*parapen 
+  loss <- mse*length(y) + lam*sum(c(parlist$beta_param*parapen 
     , parlist$beta
     , unlist(sapply(pl_for_lossfun, as.numeric)))^2
   )
@@ -416,7 +416,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
         }
         pl_for_lossfun[[1]] <- c(unlist(convolutional$convParms, convolutional$convBias))
       }
-      loss <- mse + lam*sum(c(parlist$beta_param*parapen
+      loss <- mse*length(y) + lam*sum(c(parlist$beta_param*parapen
                               , parlist$beta
                               , unlist(sapply(pl_for_lossfun, as.numeric)))^2
       )
@@ -535,7 +535,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     }
     pl_for_lossfun[[1]] <- c(unlist(convolutional$convParms, convolutional$convBias))
   }
-  loss <- mse + lam*sum(c(parlist$beta_param*parapen
+  loss <- mse*length(y) + lam*sum(c(parlist$beta_param*parapen
                           , parlist$beta
                           , unlist(sapply(pl_for_lossfun, as.numeric)))^2
   )
