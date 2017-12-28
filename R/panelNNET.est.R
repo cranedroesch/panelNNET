@@ -338,7 +338,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   # initialize terms used in the while loop
   D <- 1e6
   stopcounter <- iter <- 0
-  msevec <- lossvec <- c()
+  msevec <- lossvec <- siguvec <- c()
   lossvec <- append(lossvec, loss) # start with infinite loss for RE nets, because those variance parameters jump around quite a lot
   msevec <- append(msevec, mse)
   parlist_best <- parlist
@@ -417,6 +417,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       parlist <- mapply('-', parlist, updates)
       if (effects == "random"){
         sigu_env$sigu <- as.numeric(sigu_env$sigu - (sigu_env$dLdsigu*LR + sigu_env$sigu*lam*LR))
+        siguvec <- append(siguvec, sigu_env$sigu)
         XB <- MatMult(hlayers[[length(hlayers)]], c(parlist$beta_param, parlist$beta))
         groupehat <- tapply(y - XB, fe_var, mean)[unique(fe_var)] # make sure that the order of the fe_var is preserved
         re_til <- sigu_env$sigu*n_per_group/(as.numeric(var(y-yhat))+ sigu_env$sigu*n_per_group)*groupehat
@@ -511,7 +512,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
           , "*******************************************\n"  
         ))
         if (iter>1){
-          par(mfrow = c(3,2))
+          par(mfrow = c(4,2))
           if(length(y)>5000){
             plot(1, cex = 0, main = "more than 5000 obs -- not plotting scatter")
           } else {
@@ -523,6 +524,8 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
             plot(msevec[pmax(2, length(msevec)-100):length(msevec)], type = 'l', ylab = 'mse', main = 'Last 100')
             plot(lossvec[-1], type = 'l', main = 'Loss history')
             plot(lossvec[pmax(2, length(lossvec)-100):length(lossvec)], type = 'l', ylab = 'loss', main = 'Last 100')
+            hist(unique(sigu_env$re), main = "random effects")
+            plot(siguvec[-1], type = 'l', main = 'sigu history'))
           }
         }
       } # fi verbose 
@@ -589,7 +592,8 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     re_output <- NULL
   } else if (effects == "random"){
     sigu <- sigu_env$sigu
-    re <- data.frame(fe_var, re = sigu_env$re)
+    re_output <- data.frame(fe_var, re = sigu_env$re)
+    fe_output <- NULL
   }
   output <- list(yhat = yhat, parlist = parlist, hidden_layers = hlayers
     , fe = fe_output, re = re_output, converged = conv, mse = mse, loss = loss, lam = lam, time_var = time_var
