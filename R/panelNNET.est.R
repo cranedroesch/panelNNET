@@ -36,8 +36,6 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
 # effects <- "random"
 # start_sigu <- NULL
 
-  
-  print(parapen)
   ##########
   #Define internal functions
   getYhat <- function(pl, hlay = NULL, re = NULL){ 
@@ -343,7 +341,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   D <- 1e6
   stopcounter <- iter <- 0
   msevec <- lossvec <- c()
-  lossvec <- append(lossvec, ifelse(effects == "random", Inf, loss)) # start with infinite loss for RE nets, because those variance parameters jump around quite a lot
+  lossvec <- append(lossvec, loss) # start with infinite loss for RE nets, because those variance parameters jump around quite a lot
   msevec <- append(msevec, mse)
   parlist_best <- parlist
   ###############
@@ -481,7 +479,11 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
         } else { # reset stopcounter if not slowing per convergence tolerance
           stopcounter <- 0
           # check and see if loss has been up for a while
-          bestloss <- which.min(lossvec)
+          if (effects == "random"){
+            bestloss <- which.min(lossvec[3:length(lossvec)]) # let lossvec burn in slightly, because variance of the RE terms can get big
+          } else {
+            bestloss <- which.min(lossvec)
+          }
           if(length(lossvec) - bestloss > maxstopcounter*2){
             if(verbose == TRUE){
               print("loss been above minimum for > 2*maxstopcounter")
@@ -592,7 +594,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     re <- data.frame(fe_var, re = sigu_env$re)
   }
   output <- list(yhat = yhat, parlist = parlist, hidden_layers = hlayers
-    , fe = fe_output, re_output, converged = conv, mse = mse, loss = loss, lam = lam, time_var = time_var
+    , fe = fe_output, re = re_output, converged = conv, mse = mse, loss = loss, lam = lam, time_var = time_var
     , X = X, y = y, param = param, fe_var = fe_var, hidden_units = hidden_units, maxit = maxit
     , msevec = msevec, RMSprop = RMSprop, convtol = convtol
     , grads = grads, activation = activation, parapen = parapen
