@@ -8,7 +8,7 @@ function(y, X, hidden_units, fe_var
   , batchsize = nrow(X)
   , maxstopcounter = 10, OLStrick = FALSE, initialization = 'HZRS'
   , dropout_hidden = 1, dropout_input = 1
-  , convolutional = NULL, LR_slowing_rate = 2, 
+  , convolutional = NULL, LR_slowing_rate = 2
   , effects = "fixed", start_sigu, 
   ...)
 {
