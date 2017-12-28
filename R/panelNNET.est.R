@@ -525,7 +525,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
             plot(lossvec[-1], type = 'l', main = 'Loss history')
             plot(lossvec[pmax(2, length(lossvec)-100):length(lossvec)], type = 'l', ylab = 'loss', main = 'Last 100')
             hist(unique(sigu_env$re), main = "random effects")
-            plot(siguvec[-1], type = 'l', main = 'sigu history'))
+            plot(siguvec[-1], type = 'l', main = 'sigu history')
           }
         }
       } # fi verbose 
