@@ -1,5 +1,5 @@
 
-OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
+OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, effects){
   # parlist <- pnn$parlist
   # hidden_layers <- pnn$hidden_layers
   # y = pnn$y
@@ -9,16 +9,16 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
   # hidden_layers <- hlayers
   constraint <- sum(c(parlist$beta_param*parapen, parlist$beta)^2)
   #getting implicit regressors depending on whether regression is panel
-  if (!is.null(fe_var)){
+  if (!is.null(fe_var) & effects == "fixed"){
     Zdm <- demeanlist(as.matrix(hidden_layers[[length(hidden_layers)]]), list(fe_var))
     targ <- demeanlist(y, list(fe_var))
-  } else {
+  } else if (effects == "random"){
     Zdm <- hidden_layers[[length(hidden_layers)]]
-    targ <- y
+    targ <- y - sigu_env$re
   }
   #set up the penalty vector
   D <- rep(1, ncol(Zdm))
-  if (is.null(fe_var)){
+  if (is.null(fe_var) | effects == "random"){
     pp <- c(0, parapen) #never penalize the intercept
   } else {
     pp <- parapen #parapen

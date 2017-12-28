@@ -3,43 +3,42 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
          , verbose, report_interval, gravity, convtol, RMSprop
          , start.LR, activation
          , batchsize, maxstopcounter, OLStrick, initialization, dropout_hidden
-         , dropout_input, convolutional, LR_slowing_rate, ...){
+         , dropout_input, convolutional, LR_slowing_rate
+         , effects, start_sigu, ...){
 
-  
-  # y = dat$logyield[dat$year %in% samp]
-  # X = X[dat$year %in% samp,]
-  # hidden_units = rep(100, 10)
-  # fe_var = dat$fips[dat$year %in% samp]
-  # maxit = 300
-  # lam = lam
-  # time_var = dat$year[dat$year %in% samp]
-  # param = Xp[dat$year %in% samp,]
-  # verbose = F
-  # report_interval = 1
-  # gravity = 1.1
-  # convtol = 1e-4
-  # activation = 'lrelu'
-  # start_LR = .001
-  # parlist = parlist 
-  # OLStrick = TRUE
-  # batchsize = batchsize
-  # maxstopcounter = 10
-  # dropout_hidden = D
-  # dropout_input = D^(log(.8)/log(.5))
-  # parapen = c(0,0,rep(1, ncol(Xp)-2))
-  # initialization = 'HZRS'
-  # RMSprop = T
-  # start.LR <- .001
-  # maxstopcounter <- 10
-  # batchsize = round(nrow(X)/100)
-  # convolutional <- NULL
-  # parapen <- rep(1, ncol(Xp))
-  # LR_slowing_rate <- 2
-  # gravity = 1.1
-  
+# y = dat$logyield
+# X = X
+# hidden_units = c(10, 5)
+# fe_var = dat$fips
+# maxit = 1000
+# lam = 10
+# time_var = dat$year
+# param = Xp
+# verbose = T
+# report_interval = 1
+# gravity = 1.1
+# convtol = 1e-5 
+# activation = 'lrelu'
+# parlist = NULL
+# OLStrick = T
+# batchsize = nrow(X)
+# maxstopcounter = 10
+# dropout_hidden = 1
+# dropout_input = 1^(log(.8)/log(.5))
+# parapen = c(0,0,rep(1, ncol(Xp)-2))
+# initialization = 'HZRS'
+# RMSprop = T
+# start.LR <- .001
+# maxstopcounter <- 10
+# convolutional <- NULL
+# parapen <- rep(1, ncol(Xp))
+# LR_slowing_rate <- 2
+# effects <- "random"
+# start_sigu <- NULL
+
   ##########
   #Define internal functions
-  getYhat <- function(pl, hlay = NULL){ 
+  getYhat <- function(pl, hlay = NULL, re = NULL){ 
     #Update hidden layers
     if (is.null(hlay)){hlay <- calc_hlayers(pl,
                                             X = X,
@@ -47,17 +46,24 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
                                             fe_var = fe_var,
                                             nlayers = nlayers,
                                             convolutional = convolutional,
-                                            activ = activation)}
+                                            activ = activation, effects = effects)}
     #update yhat
-    if (!is.null(fe_var)){
+    if (!is.null(fe_var) & effects == "fixed"){
       Zdm <- demeanlist(as.matrix(hlay[[length(hlay)]]), list(fe_var))
       fe <- (y-ydm) - MatMult(as.matrix(hlay[[length(hlay)]])-Zdm, as.matrix(c(pl$beta_param, pl$beta)))
       yhat <- MatMult(hlay[[length(hlay)]], c(pl$beta_param, pl$beta)) + fe    
-    } else {
-      yhat <- MatMult(hlay[[length(hlay)]], c(pl$beta_param, pl$beta))
+    } else if (effects == "random"){
+      XB <- MatMult(hlay[[length(hlay)]], c(pl$beta_param, pl$beta))
+      ehat <- y - XB
+      if(!exists("yhat")){yhat <- XB} #there will be a yhat in the parent environment after the first time this is run.  
+      groupehat <- tapply(ehat, fe_var, mean)[unique(fe_var)] # make sure that the order of the fe_var is preserved
+      re_til <- sigu_env$sigu*n_per_group/(as.numeric(var(y-yhat))+ sigu_env$sigu*n_per_group)*groupehat
+      sigu_env$re <- rep(re_til, times = n_per_group) # put the BLUPs in the sigu enviornment
+      yhat <- XB + sigu_env$re
     }
     return(as.numeric(yhat))
   }
+
 
   calc_grads<- function(plist, hlay = NULL, yhat = NULL, curBat = NULL, droplist = NULL, dropinp = NULL){
     #subset the parameters and hidden layers based on the droplist
@@ -104,10 +110,18 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     hlay <- lapply(hlay, as.matrix)
     for (i in 1:length(grad_stubs)){
       if (i == 1){lay = as.matrix(CB(Xd))} else {lay= CB(hlay[[i-1]])}
-      if (i != length(grad_stubs) | is.null(fe_var)){# don't add bias term to top layer when there are fixed effects present
+      if (i != length(grad_stubs) | (is.null(fe_var) | effects == "random")){# don't add bias term to top layer when there are fixed effects present
         lay <- cbind(1, lay) #add bias to the hidden layer
       }
       grads[[i]] <- eigenMapMatMult(t(lay), as.matrix(grad_stubs[[i]]))
+    }
+    # Random effects gradient
+    if (effects == "random"){
+      ehat <- y - yhat
+      groupehat <- tapply(ehat, fe_var, mean)[unique(fe_var)] # make sure that the order of the fe_var is preserved
+      groupehatvec <- rep(groupehat, times = n_per_group)
+      npgvec <- rep(n_per_group, times = n_per_group)
+      sigu_env$dLdsigu <- crossprod(-2*ehat, groupehatvec*npgvec/(var(ehat) + npgvec*sigu_env$sigu) + sigu_env$sigu)
     }
     # if using dropout, reconstitute full gradient
     if (!is.null(droplist)){
@@ -170,7 +184,6 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     NTV <- convMask[,colnames(convMask) %ni% convolutional$topology]
     return(Matrix(cbind(TV, NTV)))
   }
-  
   ###########################
   # sanity checks.  here place checks to ensure that arguments supplied will yield sensible output
   ###########################
@@ -185,6 +198,8 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   if (!is.null(param)){
     param <- scale(param)
   }
+  fe_var <- factor(fe_var) # lose unused factor levels, and make the levels correspond with their order as supplied
+  n_per_group <- table(fe_var)
   if (activation == 'tanh'){
     activ <- tanh
     activ_prime <- tanh_prime
@@ -270,19 +285,30 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     } else {
       parlist$beta_param <- runif(ncol(param), -ubounds, ubounds)
     }
+    if (is.null(fe_var) | effects == "random"){
+      parlist$beta_param <- c(runif(1, -ubounds, ubounds), parlist$beta_param)
+    }
     #add the bias term/intercept onto the front, if there are no FE's
     parlist$beta_param <- c(runif(is.null(fe_var), -ubounds, ubounds), parlist$beta_param)
-    #if there are no FE's, append a 0 to the front of the parapen vec, to leave the intercept unpenalized
-    if(is.null(fe_var)){
+    #if there are no FE's, or if we are using random effects, append a 0 to the front of the parapen vec, to leave the intercept unpenalized
+    if(is.null(fe_var) | effects == "random"){
       parapen <- c(0, parapen)
     }
+    # initialize variance of intercepts if effects = "random"
+    if (effects == "random"){
+      sigu_env <- new.env()
+      if (is.null(start_sigu)){
+        sigu_env$sigu <- var(y)/10  #starting at a tenth of the unconditional variance, arbitrarially        
+      }
+    }
   }
-  #compute hidden layers given parlist
+  #######################################
+  # compute hidden layers given parlist
   hlayers <- calc_hlayers(parlist, X = X, param = param, 
                           fe_var = fe_var, nlayers = nlayers, 
-                          convolutional = convolutional, activation = activation)
+                          convolutional = convolutional, activation = activation, effects = effects)
   #calculate ydm and put it in global...
-  if (!is.null(fe_var)){
+  if (!is.null(fe_var) & effects == "fixed"){
     ydm <<- demeanlist(y, list(fe_var)) 
   }
   #####################################
@@ -316,7 +342,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   D <- 1e6
   stopcounter <- iter <- 0
   msevec <- lossvec <- c()
-  lossvec <- append(lossvec, loss)
+  lossvec <- append(lossvec, ifelse(effects == "random", Inf, loss)) # start with infinite loss for RE nets, because those variance parameters jump around quite a lot
   msevec <- append(msevec, mse)
   parlist_best <- parlist
   ###############
@@ -392,19 +418,27 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       }
       # Update parameters from update list
       parlist <- mapply('-', parlist, updates)
+      if (effects == "random"){
+        sigu_env$sigu <- as.numeric(sigu_env$sigu - (sigu_env$dLdsigu*LR + sigu_env$sigu*lam*LR))
+        XB <- MatMult(hlayers[[length(hlayers)]], c(parlist$beta_param, parlist$beta))
+        groupehat <- tapply(y - XB, fe_var, mean)[unique(fe_var)] # make sure that the order of the fe_var is preserved
+        re_til <- sigu_env$sigu*n_per_group/(as.numeric(var(y-yhat))+ sigu_env$sigu*n_per_group)*groupehat
+        sigu_env$re <- rep(re_til, times = n_per_group) # put the BLUPs in the sigu enviornment
+      }
       # Update hidden layers
       hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var, 
-                              nlayers = nlayers, convolutional = convolutional, activ = activation)
+                              nlayers = nlayers, convolutional = convolutional, activ = activation, effects = effects)
       # OLS trick!
       if (OLStrick == TRUE){
         parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
-                                     , fe_var = fe_var, lam = lam, parapen = parapen)
+                                     , fe_var = fe_var, lam = lam, parapen = parapen, effects = effects)
       }
 
       #update yhat
       yhat <- getYhat(parlist, hlay = hlayers)
       mse <- mean((y-yhat)^2)
       pl_for_lossfun <- parlist[!grepl('beta', names(parlist))]
+      if (effects == "random"){pl_for_lossfun <- c(pl_for_lossfun, sigu_env$sigu)}
       if (!is.null(convolutional)){ # coerce the convolutional parameters to a couple of vectors to avoid double-counting in the loss
         convolutional$convParms <- foreach(i = 1:convolutional$Nconv) %do% {
           idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
@@ -500,7 +534,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   parlist <- parlist_best
   hlayers <- calc_hlayers(parlist, X = X, param = param,
                           fe_var = fe_var, nlayers = nlayers,
-                          convolutional = convolutional, activ = activation)
+                          convolutional = convolutional, activ = activation, effects = effects)
   # #If trained with dropput, weight the layers by expectations
   # if(dropout_hidden<1){
   #   for (i in nlayers:1){
@@ -524,6 +558,8 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   yhat <- getYhat(parlist, hlay = hlayers)
   mse <- mean((y-yhat)^2)
   pl_for_lossfun <- parlist[!grepl('beta', names(parlist))]
+  if (effects == "random"){pl_for_lossfun <- c(pl_for_lossfun, sigu_env$sigu)}
+  
   if (!is.null(convolutional)){ # coerce the convolutional parameters to a couple of vectors to avoid double-counting in the loss
     convolutional$convParms <- foreach(i = 1:convolutional$Nconv) %do% {
       idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
@@ -541,17 +577,21 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   )
   conv <- (iter < maxit)#Did we get convergence?
   if(is.null(fe_var)){
-    fe_output <- NULL
-  } else {
+    fe_output <- re_output <- NULL
+  } else if (effects == "fixed"){
     Zdm <- demeanlist(as.matrix(hlayers[[length(hlayers)]]), list(fe_var))
     Zdm <- Matrix(Zdm)
     fe <- (y-ydm) - as.matrix(hlayers[[length(hlayers)]]-Zdm) %*% as.matrix(c(
         parlist$beta_param, parlist$beta
     ))
-  fe_output <- data.frame(fe_var, fe)
+    fe_output <- data.frame(fe_var, fe)
+    re_output <- NULL
+  } else if (effects == "random"){
+    sigu <- sigu_env$sigu
+    re <- data.frame(fe_var, re = sigu_env$re)
   }
   output <- list(yhat = yhat, parlist = parlist, hidden_layers = hlayers
-    , fe = fe_output, converged = conv, mse = mse, loss = loss, lam = lam, time_var = time_var
+    , fe = fe_output, re_output, converged = conv, mse = mse, loss = loss, lam = lam, time_var = time_var
     , X = X, y = y, param = param, fe_var = fe_var, hidden_units = hidden_units, maxit = maxit
     , msevec = msevec, RMSprop = RMSprop, convtol = convtol
     , grads = grads, activation = activation, parapen = parapen
