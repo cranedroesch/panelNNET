@@ -294,11 +294,9 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       parapen <- c(0, parapen)
     }
     # initialize variance of intercepts if effects = "random"
+    sigu_env <- new.env()
     if (effects == "random"){
-      sigu_env <- new.env()
-      if (is.null(start_sigu)){
-        sigu_env$sigu <- var(y)/10  #starting at a tenth of the unconditional variance, arbitrarially        
-      }
+      sigu_env$sigu <- var(y)/10  #starting at a tenth of the unconditional variance, arbitrarially        
     }
   }
   #######################################
@@ -430,7 +428,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       # OLS trick!
       if (OLStrick == TRUE){
         parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
-                                     , fe_var = fe_var, lam = lam, parapen = parapen, effects = effects)
+                                     , fe_var = fe_var, lam = lam, parapen = parapen, effects = effects, re = sigu_env$re)
       }
 
       #update yhat

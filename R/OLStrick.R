@@ -1,5 +1,5 @@
 
-OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, effects){
+OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, effects, re = NULL){
   # parlist <- pnn$parlist
   # hidden_layers <- pnn$hidden_layers
   # y = pnn$y
@@ -14,7 +14,7 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, e
     targ <- demeanlist(y, list(fe_var))
   } else if (effects == "random"){
     Zdm <- hidden_layers[[length(hidden_layers)]]
-    targ <- y - sigu_env$re
+    targ <- y - re
   }
   #set up the penalty vector
   D <- rep(1, ncol(Zdm))
