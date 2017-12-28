@@ -36,6 +36,8 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
 # effects <- "random"
 # start_sigu <- NULL
 
+  
+  print(parapen)
   ##########
   #Define internal functions
   getYhat <- function(pl, hlay = NULL, re = NULL){ 
@@ -189,7 +191,6 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   ###########################
   if (gravity <= 1){stop("Gravity must be >1")}
   if (start.LR <= 0){stop("Learning rate must be positive")}
-  # if (LR_slowing_rate <= 1){stop("LR_slowing_rate must larger than 1")}
   ###########################
   # start fitting
   ###########################
