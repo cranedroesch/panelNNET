@@ -6,35 +6,35 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
          , dropout_input, convolutional, LR_slowing_rate
          , effects, start_sigu, ...){
 
-# y = dat$logyield
-# X = X
-# hidden_units = c(10, 5)
-# fe_var = dat$fips
-# maxit = 1000
-# lam = 10
-# time_var = dat$year
-# param = Xp
-# verbose = T
-# report_interval = 1
-# gravity = 1.1
-# convtol = 1e-5 
-# activation = 'lrelu'
-# parlist = NULL
-# OLStrick = T
-# batchsize = nrow(X)
-# maxstopcounter = 10
-# dropout_hidden = 1
-# dropout_input = 1^(log(.8)/log(.5))
-# parapen = c(0,0,rep(1, ncol(Xp)-2))
-# initialization = 'HZRS'
-# RMSprop = T
-# start.LR <- .001
-# maxstopcounter <- 10
-# convolutional <- NULL
-# parapen <- rep(1, ncol(Xp))
-# LR_slowing_rate <- 2
-# effects <- "random"
-# start_sigu <- NULL
+y = dat$logyield
+X = X
+hidden_units = c(10, 5)
+fe_var = dat$fips
+maxit = 1000
+lam = 10
+time_var = dat$year
+param = Xp
+verbose = T
+report_interval = 1
+gravity = 1.1
+convtol = 1e-5
+activation = 'lrelu'
+parlist = NULL
+OLStrick = T
+batchsize = nrow(X)
+maxstopcounter = 10
+dropout_hidden = 1
+dropout_input = 1^(log(.8)/log(.5))
+parapen = c(0,0,rep(1, ncol(Xp)-2))
+initialization = 'HZRS'
+RMSprop = T
+start.LR <- .001
+maxstopcounter <- 10
+convolutional <- NULL
+parapen <- rep(1, ncol(Xp))
+LR_slowing_rate <- 2
+effects <- "random"
+start_sigu <- NULL
 
   ##########
   #Define internal functions
