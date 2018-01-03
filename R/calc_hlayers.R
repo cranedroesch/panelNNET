@@ -1,5 +1,12 @@
 
-calc_hlayers <- function(parlist, X = X, param = param, fe_var = fe_var, nlayers = nlayers, convolutional, activation){
+calc_hlayers <- function(parlist, 
+                         X = X, 
+                         param = param, 
+                         cs_var = cs_var, 
+                         nlayers = nlayers, 
+                         convolutional, 
+                         activation,
+                         effects){
   if (activation == 'tanh'){
     activ <- tanh
   }
@@ -30,8 +37,9 @@ calc_hlayers <- function(parlist, X = X, param = param, fe_var = fe_var, nlayers
     hlayers[[i]] <- cbind(param, hlayers[[i]])
     colnames(hlayers[[i]])[1:ncol(param)] <- paste0('param',1:ncol(param))
   }
-  if (is.null(fe_var)){#add intercept if no FEs
+  if (is.null(cs_var) | effects == "random"){#add intercept if no FEs or if using random effects
     hlayers[[i]] <- cbind(1, hlayers[[i]])
+    colnames(hlayers[[i]])[1] <- "intercept"
   }
   return(hlayers)
 }
