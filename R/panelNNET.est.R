@@ -2,7 +2,8 @@ panelNNET.est <-
 function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parlist
          , verbose, report_interval, gravity, convtol, RMSprop
          , start.LR, activation
-         , batchsize, maxstopcounter, OLStrick, initialization, dropout_hidden
+         , batchsize, maxstopcounter, OLStrick, OLStrick_rate
+         , initialization, dropout_hidden
          , dropout_input, convolutional, LR_slowing_rate, ...){
 
   
@@ -396,7 +397,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var, 
                               nlayers = nlayers, convolutional = convolutional, activ = activation)
       # OLS trick!
-      if (OLStrick == TRUE){
+      if (OLStrick == TRUE  & (OLStrick_rate %% iter == 0)){
         parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
                                      , fe_var = fe_var, lam = lam, parapen = parapen)
       }
