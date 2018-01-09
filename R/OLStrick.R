@@ -26,13 +26,15 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
   D[1:length(pp)] <- D[1:length(pp)]*pp #incorporate parapen into diagonal of covmat
   # find implicit lambda
   b <- c(parlist$beta_param, parlist$beta)
-  newlam <-   1/constraint * MatMult(t(b), (MatMult(t(Zdm), targ) - MatMult(MatMult(t(Zdm), Zdm),b)))
+  Zty <- MatMult(t(Zdm), targ)
+  ZtZ <- MatMult(t(Zdm), Zdm)
+  newlam <-   1/constraint * MatMult(t(b), (Zty - MatMult(ZtZ,b)))
   newlam <- max(lam, newlam) #dealing with the case where you're not constrained
   #New top-level params
-  b <- tryCatch(as.numeric(MatMult(MatMult(solve(MatMult(t(Zdm),Zdm) + diag(D)*as.numeric(newlam)), t(Zdm)), targ)),
+  b <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(newlam)), Zty)),
                 error = function(e)e)
   if (inherits(b, "error")){
-    b <- as.numeric(MatMult(MatMult(ginv(MatMult(t(Zdm),Zdm) + diag(D)*as.numeric(newlam)), t(Zdm)), targ))
+    b <- as.numeric(MatMult(ginv(ZtZ + diag(D)*as.numeric(newlam)), Zty))
   }
   parlist$beta_param <- b[1:length(parlist$beta_param)]
   parlist$beta <- b[(length(parlist$beta_param)+1):length(b)]
