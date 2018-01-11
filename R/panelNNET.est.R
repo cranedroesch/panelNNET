@@ -6,38 +6,33 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
          , initialization, dropout_hidden
          , dropout_input, convolutional, LR_slowing_rate, ...){
 
-  
-  # y = dat$logyield[dat$year %in% samp]
+  # y = dat$yield[dat$year %in% samp]
   # X = X[dat$year %in% samp,]
-  # hidden_units = rep(100, 10)
+  # hidden_units = arch
   # fe_var = dat$fips[dat$year %in% samp]
-  # maxit = 300
+  # maxit = 1e5
   # lam = lam
   # time_var = dat$year[dat$year %in% samp]
   # param = Xp[dat$year %in% samp,]
-  # verbose = F
+  # verbose = T
   # report_interval = 1
-  # gravity = 1.1
+  # gravity = hpgrid$grav[g]
   # convtol = 1e-4
-  # activation = 'lrelu'
-  # start_LR = .001
-  # parlist = parlist 
-  # OLStrick = TRUE
+  # activation = hpgrid$actgrid[g]
+  # start_LR = .0001
+  # parlist = NULL
+  # OLStrick = hpgrid$olstrick[g]
   # batchsize = batchsize
-  # maxstopcounter = 10
+  # maxstopcounter = MST
   # dropout_hidden = D
   # dropout_input = D^(log(.8)/log(.5))
-  # parapen = c(0,0,rep(1, ncol(Xp)-2))
+  # parapen = c(0,0,rep(hpgrid$pp[g], ncol(Xp)-2))
+  # convolutional = convargs
   # initialization = 'HZRS'
   # RMSprop = T
   # start.LR <- .001
-  # maxstopcounter <- 10
-  # batchsize = round(nrow(X)/100)
-  # convolutional <- NULL
-  # parapen <- rep(1, ncol(Xp))
   # LR_slowing_rate <- 2
-  # gravity = 1.1
-  
+
   ##########
   #Define internal functions
   getYhat <- function(pl, hlay = NULL){ 
@@ -144,7 +139,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       #gradients for conv layer.  pooling via rowMeans
       grads_convParms <- foreach(i = 1:convolutional$Nconv) %do% {
         idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
-        rowMeans(foreach(j = idx, .combine = cbind) %do% {x <- gg[,j]; x[x!=0][-1]})
+        rowMeans(foreach(j = idx, .combine = cbind) %do% {x <- gg[,j]; x[1] <- -999; x[x!=0][-1]})
       }
       grads_convBias <- foreach(i = 1:convolutional$Nconv, .combine = c) %do% {
         idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
