@@ -2,36 +2,37 @@ panelNNET.est <-
 function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parlist
          , verbose, report_interval, gravity, convtol, RMSprop
          , start.LR, activation
-         , batchsize, maxstopcounter, OLStrick, OLStrick_rate
+         , batchsize, maxstopcounter, OLStrick
          , initialization, dropout_hidden
          , dropout_input, convolutional, LR_slowing_rate, ...){
 
-  # y = dat$yield[dat$year %in% samp]
-  # X = X[dat$year %in% samp,]
-  # hidden_units = arch
-  # fe_var = dat$fips[dat$year %in% samp]
-  # maxit = 1e5
-  # lam = lam
-  # time_var = dat$year[dat$year %in% samp]
-  # param = Xp[dat$year %in% samp,]
-  # verbose = T
-  # report_interval = 1
-  # gravity = hpgrid$grav[g]
-  # convtol = 1e-4
-  # activation = hpgrid$actgrid[g]
-  # start_LR = .0001
-  # parlist = NULL
-  # OLStrick = hpgrid$olstrick[g]
-  # batchsize = batchsize
-  # maxstopcounter = MST
-  # dropout_hidden = D
-  # dropout_input = D^(log(.8)/log(.5))
-  # parapen = c(0,0,rep(hpgrid$pp[g], ncol(Xp)-2))
-  # convolutional = convargs
-  # initialization = 'HZRS'
-  # RMSprop = T
-  # start.LR <- .001
-  # LR_slowing_rate <- 2
+  y = dat$yield[dat$year %in% samp]
+  X = X[dat$year %in% samp,]
+  hidden_units = rep(100, 10)
+  fe_var = dat$fips[dat$year %in% samp]
+  maxit = 10000
+  lam = lam
+  time_var = dat$year[dat$year %in% samp]
+  param = Xp[dat$year %in% samp,]
+  verbose = T
+  report_interval = 1
+  gravity = 1.1
+  convtol = 1e-3
+  activation = 'lrelu'
+  start_LR = .0001
+  parlist = parlist
+  OLStrick = TRUE
+  batchsize = 256
+  maxstopcounter = 50
+  parapen = c(0,0,rep(1, ncol(Xp)-2))
+  D = 1
+  dropout_hidden = D
+  dropout_input = D^(log(.8)/log(.5))
+  convolutional = NULL
+  initialization = 'HZRS'
+  RMSprop = T
+  start.LR <- .0001
+  LR_slowing_rate <- 2
 
   ##########
   #Define internal functions
@@ -392,7 +393,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var, 
                               nlayers = nlayers, convolutional = convolutional, activ = activation)
       # OLS trick!
-      if (OLStrick == TRUE  & (OLStrick_rate %% iter == 0)){
+      if (OLStrick == TRUE){
         parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
                                      , fe_var = fe_var, lam = lam, parapen = parapen)
       }

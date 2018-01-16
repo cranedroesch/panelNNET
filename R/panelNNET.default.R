@@ -6,7 +6,7 @@ function(y, X, hidden_units, fe_var
   , gravity = 1.01, convtol = 1e-8, RMSprop = TRUE, start_LR = .01
   , activation = 'relu'
   , batchsize = nrow(X)
-  , maxstopcounter = 10, OLStrick = FALSE, OLStrick_rate = 1
+  , maxstopcounter = 10, OLStrick = FALSE
   , initialization = 'HZRS'
   , dropout_hidden = 1, dropout_input = 1
   , convolutional = NULL, LR_slowing_rate = 2, ...)
@@ -16,7 +16,7 @@ function(y, X, hidden_units, fe_var
     , report_interval, gravity, convtol, RMSprop
     , start_LR, activation 
     , batchsize, maxstopcounter
-    , OLStrick, OLStrick_rate, initialization, dropout_hidden, dropout_input
+    , OLStrick, initialization, dropout_hidden, dropout_input
     , convolutional, LR_slowing_rate
   )
   out$call = match.call()
