@@ -6,33 +6,33 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
          , initialization, dropout_hidden
          , dropout_input, convolutional, LR_slowing_rate, ...){
 
-  y = dat$yield[dat$year %in% samp]
-  X = X[dat$year %in% samp,]
-  hidden_units = rep(100, 10)
-  fe_var = dat$fips[dat$year %in% samp]
-  maxit = 10000
-  lam = lam
-  time_var = dat$year[dat$year %in% samp]
-  param = Xp[dat$year %in% samp,]
-  verbose = T
-  report_interval = 1
-  gravity = 1.1
-  convtol = 1e-3
-  activation = 'lrelu'
-  start_LR = .0001
-  parlist = parlist
-  OLStrick = TRUE
-  batchsize = 256
-  maxstopcounter = 50
-  parapen = c(0,0,rep(1, ncol(Xp)-2))
-  D = 1
-  dropout_hidden = D
-  dropout_input = D^(log(.8)/log(.5))
-  convolutional = NULL
-  initialization = 'HZRS'
-  RMSprop = T
-  start.LR <- .0001
-  LR_slowing_rate <- 2
+  # y = dat$yield[dat$year %in% samp]
+  # X = X[dat$year %in% samp,]
+  # hidden_units = rep(100, 10)
+  # fe_var = dat$fips[dat$year %in% samp]
+  # maxit = 10000
+  # lam = lam
+  # time_var = dat$year[dat$year %in% samp]
+  # param = Xp[dat$year %in% samp,]
+  # verbose = T
+  # report_interval = 1
+  # gravity = 1.1
+  # convtol = 1e-3
+  # activation = 'lrelu'
+  # start_LR = .0001
+  # parlist = parlist
+  # OLStrick = TRUE
+  # batchsize = 256
+  # maxstopcounter = 50
+  # parapen = c(0,0,rep(1, ncol(Xp)-2))
+  # D = 1
+  # dropout_hidden = D
+  # dropout_input = D^(log(.8)/log(.5))
+  # convolutional = NULL
+  # initialization = 'HZRS'
+  # RMSprop = T
+  # start.LR <- .0001
+  # LR_slowing_rate <- 2
 
   ##########
   #Define internal functions
