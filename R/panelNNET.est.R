@@ -2,9 +2,10 @@ panelNNET.est <-
 function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parlist
          , verbose, report_interval, gravity, convtol, RMSprop
          , start.LR, activation
-         , batchsize, maxstopcounter, OLStrick, initialization, dropout_hidden
+         , batchsize, maxstopcounter, OLStrick
+         , initialization, dropout_hidden
          , dropout_input, convolutional, LR_slowing_rate, ...){
-  
+
   ##########
   #Define internal functions
   getYhat <- function(pl, hlay = NULL){ 
@@ -111,7 +112,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       #gradients for conv layer.  pooling via rowMeans
       grads_convParms <- foreach(i = 1:convolutional$Nconv) %do% {
         idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
-        rowMeans(foreach(j = idx, .combine = cbind) %do% {x <- gg[,j]; x[x!=0][-1]})
+        rowMeans(foreach(j = idx, .combine = cbind) %do% {x <- gg[,j]; x[1] <- -999; x[x!=0][-1]})
       }
       grads_convBias <- foreach(i = 1:convolutional$Nconv, .combine = c) %do% {
         idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
