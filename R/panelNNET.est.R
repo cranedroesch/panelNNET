@@ -4,38 +4,6 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
          , start.LR, activation
          , batchsize, maxstopcounter, OLStrick, initialization, dropout_hidden
          , dropout_input, convolutional, LR_slowing_rate, ...){
-
-  
-  # y = dat$logyield[dat$year %in% samp]
-  # X = X[dat$year %in% samp,]
-  # hidden_units = rep(100, 10)
-  # fe_var = dat$fips[dat$year %in% samp]
-  # maxit = 300
-  # lam = lam
-  # time_var = dat$year[dat$year %in% samp]
-  # param = Xp[dat$year %in% samp,]
-  # verbose = F
-  # report_interval = 1
-  # gravity = 1.1
-  # convtol = 1e-4
-  # activation = 'lrelu'
-  # start_LR = .001
-  # parlist = parlist 
-  # OLStrick = TRUE
-  # batchsize = batchsize
-  # maxstopcounter = 10
-  # dropout_hidden = D
-  # dropout_input = D^(log(.8)/log(.5))
-  # parapen = c(0,0,rep(1, ncol(Xp)-2))
-  # initialization = 'HZRS'
-  # RMSprop = T
-  # start.LR <- .001
-  # maxstopcounter <- 10
-  # batchsize = round(nrow(X)/100)
-  # convolutional <- NULL
-  # parapen <- rep(1, ncol(Xp))
-  # LR_slowing_rate <- 2
-  # gravity = 1.1
   
   ##########
   #Define internal functions
