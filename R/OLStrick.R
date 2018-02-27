@@ -39,9 +39,9 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
   newlam2 <- o$par
   #New top-level params
   b <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(newlam2)), Zty)),
-                error = function(e)e)
+                error = function(e){b})
   if (inherits(b, "error")){
-    stop("ginv?")
+    print("singularity in OLStrick!")
     return(parlist)
     # b <- as.numeric(MatMult(ginv(ZtZ + diag(D)*as.numeric(newlam)), Zty))
   }
