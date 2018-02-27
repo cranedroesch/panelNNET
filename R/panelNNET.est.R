@@ -1,16 +1,145 @@
-panelNNET.est <-
-function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parlist
-         , verbose, report_interval, gravity, convtol, RMSprop
-         , start.LR, activation
-         , batchsize, maxstopcounter, OLStrick
-         , initialization, dropout_hidden
-         , dropout_input, convolutional, LR_slowing_rate, ...){
+# panelNNET.est <-
+# function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parlist
+#          , verbose, report_interval, gravity, convtol, RMSprop
+#          , start_LR, activation
+#          , batchsize, maxstopcounter, OLStrick
+#          , initialization, dropout_hidden
+#          , dropout_input, convolutional, LR_slowing_rate, batchnorm, ...){
 
+rm(list = ls())
+set.seed(1)
+library(panelNNET)
+library(dplyr)
+library(matrixStats)
+"%ni%" <- Negate("%in%")
+N <- 10000
+p <- 10
+X <- matrix(runif(N*p, 0, 10), N)  
+fe <- (1:N-1) %/% (N/100) +1
+time_var = (1:N-1) %% 10 +1
+y <- exp(sin(apply(X, 2, function(x){rnorm(1)*sin(rnorm(1)*x)}) %*% rnorm(10))) + fe/100 + time_var/10 - (time_var/100)^2
+hidden_units <- rep(20, 10)
+fe_var <- as.factor(fe)
+maxit = 100000
+lam = 1
+param <- cbind(time_var, time_var^2)
+parapen <- c(0,0)
+parlist <- NULL
+verbose <- TRUE
+report_interval = 1
+gravity = 1.1
+convtol = 1e-5
+RMSprop = TRUE
+start_LR = .0001
+activation = "lrelu"
+batchsize = 256
+maxstopcounter = 25
+OLStrick = TRUE
+initialization = "HZRS"
+dropout_hidden <- dropout_input <- 1
+convolutional <- NULL
+LR_slowing_rate = 2
+batchnorm <- T
+
+colScale = function(x,
+                    center = TRUE,
+                    scale = TRUE,
+                    add_attr = TRUE,
+                    rows = NULL,
+                    cols = NULL) {
+  
+  if (!is.null(rows) && !is.null(cols)) {
+    x <- x[rows, cols, drop = FALSE]
+  } else if (!is.null(rows)) {
+    x <- x[rows, , drop = FALSE]
+  } else if (!is.null(cols)) {
+    x <- x[, cols, drop = FALSE]
+  }
+  
+  ################
+  # Get the column means
+  ################
+  cm = colMeans(x, na.rm = TRUE)
+  ################
+  # Get the column sd
+  ################
+  if (scale) {
+    csd = colSds(x, center = cm)
+  } else {
+    # just divide by 1 if not
+    csd = rep(1, length = length(cm))
+  }
+  if (!center) {
+    # just subtract 0
+    cm = rep(0, length = length(cm))
+  }
+  x = t( (t(x) - cm) / csd )
+  if (add_attr) {
+    if (center) {
+      attr(x, "scaled:center") <- cm
+    }
+    if (scale) {
+      attr(x, "scaled:scale") <- csd
+    }
+  }
+  return(x)
+}
+
+
+calc_hlayers <- function(parlist, BNparm = NULL, X = X, param = param, fe_var = fe_var, nlayers = nlayers, convolutional, activation){
+  if (activation == 'tanh'){
+    activ <- tanh
+  }
+  if (activation == 'logistic'){
+    activ <- logistic
+  }
+  if (activation == 'relu'){
+    activ <- relu
+  }
+  if (activation == 'lrelu'){
+    activ <- lrelu
+  }
+  hlayers <- vector('list', nlayers)
+  # define re-used variables
+  N <- nrow(X)
+  lBN <- unlist(sapply(lapply(parlist, dim), function(x){unlist(x)[2]}))
+  # loop through
+  for (i in 1:(nlayers + !is.null(convolutional))){
+    if (i == 1){D <- X} else {D <- hlayers[[i-1]]}
+    D <- cbind(1, D) #add bias
+    # make sure that the time-invariant variables pass through the convolutional layer without being activated
+    if (is.null(convolutional) | i > 1){
+      if (!is.null(BNparm)){
+        hlayers[[i]] <- activ(t(matrix(rep(BNparm[[i]]$G, N), lBN[i])) *
+                                colScale(MatMult(D, parlist[[i]]), add_attr = FALSE) +
+                                t(matrix(rep(BNparm[[i]]$B, N), lBN[i])))
+      } else {
+        hlayers[[i]] <- activ(MatMult(D, parlist[[i]])) 
+      }
+    } else {
+      HL <- MatMult(D, parlist[[i]])
+      HL[,1:(convolutional$N_TV_layers * convolutional$Nconv)] <- activ(HL[,1:(convolutional$N_TV_layers * convolutional$Nconv)])
+      hlayers[[i]] <- HL
+    }
+  }
+  colnames(hlayers[[i]]) <- paste0('nodes',1:ncol(hlayers[[i]]))
+  if (!is.null(param)){#Add parametric terms to top layer
+    hlayers[[i]] <- cbind(param, hlayers[[i]])
+    colnames(hlayers[[i]])[1:ncol(param)] <- paste0('param',1:ncol(param))
+  }
+  if (is.null(fe_var)){#add intercept if no FEs
+    hlayers[[i]] <- cbind(1, hlayers[[i]])
+  }
+  return(hlayers)
+}
+
+  
   ##########
   #Define internal functions
   getYhat <- function(pl, hlay = NULL){ 
     #Update hidden layers
     if (is.null(hlay)){hlay <- calc_hlayers(pl,
+                                            BNparm,
                                             X = X,
                                             param = param,
                                             fe_var = fe_var,
@@ -28,7 +157,8 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     return(as.numeric(yhat))
   }
 
-  calc_grads<- function(plist, hlay = NULL, yhat = NULL, curBat = NULL, droplist = NULL, dropinp = NULL){
+
+  calc_grads<- function(plist, BNparm, hlay = NULL, yhat = NULL, curBat = NULL, droplist = NULL, dropinp = NULL){
     #subset the parameters and hidden layers based on the droplist
     if (!is.null(droplist)){
       Xd <- X[,dropinp, drop = FALSE]
@@ -57,7 +187,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     if (!is.null(curBat)){CB <- function(x){x[curBat,,drop = FALSE]}} else {CB <- function(x){x}}
     if (is.null(yhat)){yhat <- getYhat(plist, hlay = hlay)}
     NL <- nlayers + as.numeric(!is.null(convolutional))
-    grads <- grad_stubs <- vector('list', NL + 1)
+    scale_factors <- BN_grads <- grads <- grad_stubs <- vector('list', NL + 1)
     grad_stubs[[length(grad_stubs)]] <- getDelta(CB(as.matrix(y)), yhat)
     for (i in NL:1){
       if (i == NL){outer_param = as.matrix(c(plist$beta))} else {outer_param = plist[[i+1]]}
@@ -66,6 +196,16 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       lay <- cbind(1, lay) #add bias to the hidden layer
       if (i != NL){outer_param <- outer_param[-1,, drop = FALSE]}      #remove parameter on upper-layer bias term
       grad_stubs[[i]] <- activ_prime(MatMult(lay, plist[[i]])) * MatMult(grad_stubs[[i+1]], Matrix::t(outer_param))
+      if (!is.null(BNparm)){# batch norm...
+        if (i == NL){
+          BNlay <- hlay[[i]][,grepl('nodes', colnames(hlay[[i]]))]
+        } else {BNlay <- hlay[[i]]}
+        XGs <- colScale(CB(BNlay))
+        gamtil <- t(matrix(rep(BNparm[[i]]$G, nrow(XGs)), hidden_units[i]))
+        BN_grads[[i]]$G <- diag(MatMult(t(XGs),  (grad_stubs[[i]]*gamtil)))
+        BN_grads[[i]]$B <- MatMult(t(rep(1, nrow(grad_stubs[[i]]))),  grad_stubs[[i]])
+        scale_factors[[i]] <- BNparm[[i]]$G / sqrt(attr(XGs, "scaled:scale")^2+1e-8)
+      }
     }
     # multiply the gradient stubs by their respective layers to get the actual gradients
     # first coerce them to regular matrix classes so that the C code for matrix multiplication can speed things up
@@ -76,7 +216,11 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       if (i != length(grad_stubs) | is.null(fe_var)){# don't add bias term to top layer when there are fixed effects present
         lay <- cbind(1, lay) #add bias to the hidden layer
       }
+      if (!is.null(BNparm) & i != length(grad_stubs)){
+        grad_stubs[[i]] <- sweep(grad_stubs[[i]], 2, scale_factors[[i]], FUN = "*")
+      }
       grads[[i]] <- eigenMapMatMult(t(lay), as.matrix(grad_stubs[[i]]))
+
     }
     # if using dropout, reconstitute full gradient
     if (!is.null(droplist)){
@@ -124,7 +268,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       convGrad[,(N_TV_layers * convolutional$Nconv+1):ncol(convGrad)] <- 0
       grads[[1]] <- convGrad
     }
-    return(grads)
+    return(list(grads = grads, BN_grads = BN_grads[1:length(hidden_units)])) # there will always be one more hidden unit
   }
 
   makeConvLayer <- function(convParms, convBias){
@@ -144,15 +288,15 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   # sanity checks.  here place checks to ensure that arguments supplied will yield sensible output
   ###########################
   if (gravity <= 1){stop("Gravity must be >1")}
-  if (start.LR <= 0){stop("Learning rate must be positive")}
+  if (start_LR <= 0){stop("Learning rate must be positive")}
   # if (LR_slowing_rate <= 1){stop("LR_slowing_rate must larger than 1")}
   ###########################
   # start fitting
   ###########################
   # do scaling
-  X <- scale(X)
+  X <- colScale(X)
   if (!is.null(param)){
-    param <- scale(param)
+    param <- colScale(param)
   }
   if (activation == 'tanh'){
     activ <- tanh
@@ -171,6 +315,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     activ_prime <- lrelu_prime
   }
   nlayers <- length(hidden_units)
+  N <- nrow(X)
   # initialize the convolutional layer, if present
   if (!is.null(convolutional)){
     # set set the topology to start at 1, if it isn't already there.  give a warning if it isn't.
@@ -245,9 +390,18 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     if(is.null(fe_var)){
       parapen <- c(0, parapen)
     }
+    # batchnorm
+    if (batchnorm == TRUE){
+      BNparm <- vector('list', nlayers)
+      for (i in 1:nlayers){
+        BNparm[[i]]$B <- rnorm(hidden_units[i], sd = .1)
+        BNparm[[i]]$G <- rnorm(hidden_units[i], mean = 1, sd = .1)
+      }
+      BNparm <- as.relistable(BNparm)
+    } else { BNparm <- NULL}
   }
   #compute hidden layers given parlist
-  hlayers <- calc_hlayers(parlist, X = X, param = param, 
+  hlayers <- calc_hlayers(parlist = parlist, BNparm = BNparm, X = X, param = param, 
                           fe_var = fe_var, nlayers = nlayers, 
                           convolutional = convolutional, activation = activation)
   #calculate ydm and put it in global...
@@ -265,13 +419,18 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   }
   loss <- mse + lam*sum(c(parlist$beta_param*parapen 
     , parlist$beta
-    , unlist(sapply(pl_for_lossfun, as.numeric)))^2
+    , unlist(sapply(pl_for_lossfun, as.numeric))
+    , unlist(sapply(BNparm, as.vector))
+    )^2
   )
-  LRvec <- LR <- start.LR# starting step size
+  LRvec <- LR <- start_LR# starting step size
   #Calculate gradients
-  grads <- calc_grads(parlist, hlayers, yhat, droplist = NULL, dropinp = NULL)
+  GRlist <- calc_grads(parlist, BNparm, hlayers, yhat, droplist = NULL, dropinp = NULL)
   #Initialize updates
   updates <- lapply(parlist, function(x){x*0})
+  if (!is.null(BNparm)){
+    BN_updates <- lapply(GRlist$BN_grads, function(x){relist(unlist(as.relistable(x))*0)})
+  }
   #initialize G2 term for RMSprop
   if (RMSprop == TRUE){
     #Prior gradients are zero at first iteration...
@@ -280,7 +439,10 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     betas <- matrix(unlist(G2[grepl('beta', names(G2))]))
     G2 <- G2[!grepl('beta', names(G2))]
     G2[[length(G2)+1]] <- betas
-  } else {G2 <- NULL}
+    if (!is.null(BNparm)){
+      B2 <- lapply(GRlist$BN_grads, function(x){relist(unlist(as.relistable(x))*0)})
+    }
+  } else {B2 <- G2 <- NULL}
   # initialize terms used in the while loop
   D <- 1e6
   stopcounter <- iter <- 0
@@ -300,7 +462,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     for (bat in 1:max(batchid)) { # run minibatch
       iter <- iter + 1
       curBat <- which(batchid == bat)
-      hlay <- hlayers#h lay may have experienced dropout, as distinct from hlayers
+      hlay <- hlayers # hlay may have experienced dropout, as distinct from hlayers
       # if using dropout, generate a droplist
       if (dropout_hidden < 1){
         droplist <- lapply(hlayers, function(x){
@@ -324,36 +486,53 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
         Xd <- X[,dropinp]
       } else {Xd <- X; droplist = NULL}
       # before updating gradients, compute square of gradients for RMSprop
-      if (RMSprop ==  TRUE){oldG2 <- lapply(grads, function(x){.9*x^2})} #old G2 term 
+      if (RMSprop ==  TRUE){
+        oldG2 <- lapply(GRlist$grads, function(x){.9*x^2}) # old G2 term
+        if (!is.null(BNparm)){
+          oldB2 <- relist(.9*unlist(as.relistable(GRlist$BN_grads))^2)
+        }
+      } 
       # Get updated gradients
-      grads <- calc_grads(plist = parlist, hlay = hlay
+      GRlist <- calc_grads(plist = parlist, BNparm = BNparm, hlay = hlay
         , yhat = yhat[curBat], curBat = curBat, droplist = droplist, dropinp = dropinp)
       # Calculate updates to parameters based on gradients and learning rates
       if (RMSprop == TRUE){
-        newG2 <- lapply(grads, function(x){.1*x^2}) #new gradient is squared and multiplied by .1
+        newG2 <- lapply(GRlist$grads, function(x){.1*x^2}) #new gradient is squared and multiplied by .1
         G2 <- mapply('+', newG2, oldG2)
         # updates to beta
-        uB <- LR/sqrt(G2[[length(G2)]]+1e-10) * grads[[length(grads)]]
+        uB <- LR/sqrt(G2[[length(G2)]]+1e-10) * GRlist$grads[[length(GRlist$grads)]]
         updates$beta_param <- uB[1:length(parlist$beta_param)]
         updates$beta <- uB[ncol(param)+(1:length(parlist$beta))]
         # updates to lower layers
         NL <- nlayers + as.numeric(!is.null(convolutional))
         for(i in NL:1){
-          updates[[i]] <- LR/sqrt(G2[[i]]+1e-10) * grads[[i]]
+          updates[[i]] <- LR/sqrt(G2[[i]]+1e-10) * GRlist$grads[[i]]
+        }
+        # updates to batchnorm parameters
+        if (!is.null(BNparm)){
+          # newB2 <- relist(.1*unlist(as.relistable(GRlist$BN_grads))^2)
+          # B2 <- relist(unlist(newB2)+ unlist(oldB2))
+          # BN_updates <- relist(LR/sqrt(unlist(B2)+1e-10) * unlist(as.relistable(GRlist$BN_grads)))
+          BN_updates <- relist(LR * unlist(as.relistable(GRlist$BN_grads)))
         }
       } else { #if RMSprop == FALSE
-        uB <- LR * grads[[length(grads)]]
+        if (!is.null(BNparm)){stop("vanilla SGD not implemented for batchnorm")}
+        uB <- LR * GRlist$grads[[length(GRlist$grads)]]
         updates$beta_param <- uB[1:length(parlist$beta_param)]
         updates$beta <- uB[ncol(param)+(1:length(parlist$beta))]
         NL <- nlayers + as.numeric(!is.null(convolutional))
         for(i in NL:1){
-          updates[[i]] <- LR * grads[[i]]
+          updates[[i]] <- LR * GRlist$grads[[i]]
         }
       }
       # weight decay
       if (lam != 0) {
         wd <- lapply(parlist, function(x){x*lam*LR})
         updates <- mapply("+", updates, wd)
+        if (!is.null(BNparm)){
+          BNwd <- relist(unlist(BN_updates)*lam*LR)
+          BN_updates <- relist(unlist(BNwd) + unlist(BN_updates))
+        }
         # don't update the pass-through weights for the non-time-varying variables when using conv 
         if (!is.null(convolutional)){
           updates[[1]][,colnames(updates[[1]]) %ni% convolutional$topology] <- 0
@@ -361,8 +540,11 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       }
       # Update parameters from update list
       parlist <- mapply('-', parlist, updates)
+      if (!is.null(BNparm)){
+        BNparm <- relist(unlist(BNparm) - unlist(BN_updates))        
+      }
       # Update hidden layers
-      hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var, 
+      hlayers <- calc_hlayers(parlist, BNparm, X = X, param = param, fe_var = fe_var, 
                               nlayers = nlayers, convolutional = convolutional, activ = activation)
       # OLS trick!
       if (OLStrick == TRUE){
@@ -387,7 +569,8 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       }
       loss <- mse + lam*sum(c(parlist$beta_param*parapen
                               , parlist$beta
-                              , unlist(sapply(pl_for_lossfun, as.numeric)))^2
+                              , unlist(sapply(pl_for_lossfun, as.numeric))
+                              , unlist(sapply(BNparm, as.vector)))^2
       )
       oldloss <- lossvec[length(lossvec)]
       oldmse <- msevec[length(msevec)]
@@ -467,28 +650,9 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   } #closes the while loop
   # revert to parlist_best
   parlist <- parlist_best
-  hlayers <- calc_hlayers(parlist, X = X, param = param,
+  hlayers <- calc_hlayers(parlist, BNparm, X = X, param = param,
                           fe_var = fe_var, nlayers = nlayers,
                           convolutional = convolutional, activ = activation)
-  # #If trained with dropput, weight the layers by expectations
-  # if(dropout_hidden<1){
-  #   for (i in nlayers:1){
-  #     if (i == 1){
-  #       parlist[[i]] <- parlist[[i]] * dropout_input
-  #     } else {
-  #       parlist[[i]] <- parlist[[i]] * dropout_hidden
-  #     }
-  #   }
-  #   parlist$beta <- parlist$beta * dropout_hidden
-  #   if (OLStrick == TRUE){
-  #     parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
-  #       , fe_var = fe_var, lam = lam, parapen = parapen)
-  #   }
-  #   #redo the hidden layers based on the new parlist
-  #   hlayers <- calc_hlayers(parlist, X = X, param = param,
-  #                           fe_var = fe_var, nlayers = nlayers,
-  #                           convolutional = convolutional, activ = activation)
-  # }
   # final values...
   yhat <- getYhat(parlist, hlay = hlayers)
   mse <- mean((y-yhat)^2)
@@ -506,7 +670,8 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
   }
   loss <- mse + lam*sum(c(parlist$beta_param*parapen
                           , parlist$beta
-                          , unlist(sapply(pl_for_lossfun, as.numeric)))^2
+                          , unlist(sapply(pl_for_lossfun, as.numeric))
+                          , unlist(sapply(BNparm, as.vector)))^2
   )
   conv <- (iter < maxit)#Did we get convergence?
   if(is.null(fe_var)){
@@ -519,11 +684,11 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     ))
   fe_output <- data.frame(fe_var, fe)
   }
-  output <- list(yhat = yhat, parlist = parlist, hidden_layers = hlayers
+  output <- list(yhat = yhat, parlist = parlist, BNparm = BNparm, hidden_layers = hlayers
     , fe = fe_output, converged = conv, mse = mse, loss = loss, lam = lam, time_var = time_var
     , X = X, y = y, param = param, fe_var = fe_var, hidden_units = hidden_units, maxit = maxit
     , msevec = msevec, RMSprop = RMSprop, convtol = convtol
-    , grads = grads, activation = activation, parapen = parapen
+    , activation = activation, parapen = parapen
     , batchsize = batchsize, initialization = initialization, convolutional = convolutional
     , dropout_hidden = dropout_hidden, dropout_input = dropout_input)
   return(output) # list 
