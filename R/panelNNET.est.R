@@ -4,7 +4,7 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
          , start.LR, activation
          , batchsize, maxstopcounter, OLStrick
          , initialization, dropout_hidden
-         , dropout_input, convolutional, LR_slowing_rate, ...){
+         , dropout_input, convolutional, LR_slowing_rate, return_best, ...){
 
   ##########
   #Define internal functions
@@ -466,10 +466,12 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     } #finishes epoch
   } #closes the while loop
   # revert to parlist_best
-  parlist <- parlist_best
-  hlayers <- calc_hlayers(parlist, X = X, param = param,
-                          fe_var = fe_var, nlayers = nlayers,
-                          convolutional = convolutional, activ = activation)
+  if(return_best == TRUE){
+    parlist <- parlist_best
+    hlayers <- calc_hlayers(parlist, X = X, param = param,
+                            fe_var = fe_var, nlayers = nlayers,
+                            convolutional = convolutional, activ = activation)
+  }    
   # #If trained with dropput, weight the layers by expectations
   # if(dropout_hidden<1){
   #   for (i in nlayers:1){
