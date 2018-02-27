@@ -32,7 +32,7 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
 # # if (newlam<lam){stop("newlam")}
 #   newlam1 <- max(lam, newlam) #dealing with the case where you're not constrained
   f <- function(lam){
-    bi <- trycatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(lam)), Zty)), error = function(e){b})
+    bi <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(lam)), Zty)), error = function(e){b})
     (crossprod(bi*D) - constraint)^2
   }
   o <- optim(par = lam, f = f, method = 'Brent', lower = lam, upper = 1e9)
