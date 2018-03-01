@@ -1,10 +1,36 @@
-panelNNET.est <-
-function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parlist
+panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parlist
          , verbose, report_interval, gravity, convtol, RMSprop
          , start.LR, activation
-         , batchsize, maxstopcounter, OLStrick
+         , batchsize, maxstopcounter, OLStrick, OLStrick_interval
          , initialization, dropout_hidden
          , dropout_input, convolutional, LR_slowing_rate, return_best, ...){
+
+# y = dat$yield[bsamp]
+# X = X[bsamp,]
+# hidden_units = rep(100, 10)
+# fe_var = dat$fips[bsamp]
+# maxit = 10000
+# lam = lam
+# time_var = dat$year[bsamp]
+# param = Xp[bsamp,]
+# verbose = T
+# report_interval = 1
+# gravity = 1.1
+# convtol = 1e-3
+# activation = 'lrelu'
+# start.LR = .0001
+# parlist = parlist
+# OLStrick = T
+# batchsize = 256
+# maxstopcounter = 25
+# parapen = c(0,0,rep(0, ncol(Xp)-2))
+# RMSprop = TRUE
+# initialization = "HZRS"
+# dropout_hidden <- dropout_input <- 1
+# convolutional <- NULL
+# LR_slowing_rate <- 2
+# return_best <- TRUE
+# OLStrick_interval <- 50
 
   ##########
   #Define internal functions
@@ -300,7 +326,13 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
     for (bat in 1:max(batchid)) { # run minibatch
       iter <- iter + 1
       curBat <- which(batchid == bat)
-      hlay <- hlayers#h lay may have experienced dropout, as distinct from hlayers
+      hlbatch <- calc_hlayers(parlist, X = X[curBat,], param = param[curBat,], fe_var = fe_var[curBat], 
+                              nlayers = nlayers, convolutional = convolutional, activ = activation)
+      for (h in 1:nlayers){
+        hlayers[[h]][curBat,] <- hlbatch[[h]]
+      }
+      yhat <- getYhat(parlist, hlay = hlayers) # update yhat for purpose of computing gradients
+      hlay <- hlayers# hlay may have experienced dropout, as distinct from hlayers
       # if using dropout, generate a droplist
       if (dropout_hidden < 1){
         droplist <- lapply(hlayers, function(x){
@@ -361,16 +393,16 @@ function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parli
       }
       # Update parameters from update list
       parlist <- mapply('-', parlist, updates)
-      # Update hidden layers
-      hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var, 
-                              nlayers = nlayers, convolutional = convolutional, activ = activation)
-      # OLS trick!
-      if (OLStrick == TRUE){
+      if (OLStrick == TRUE & iter %% OLStrick_interval == 1){ # do OLStrick on first iteration
+        # Update hidden layers
+        hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var,
+                                nlayers = nlayers, convolutional = convolutional, activ = activation)
+        # OLS trick!
         parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
                                      , fe_var = fe_var, lam = lam, parapen = parapen)
       }
 
-      #update yhat
+      #update yhat for purpose of computing loss function
       yhat <- getYhat(parlist, hlay = hlayers)
       mse <- mean((y-yhat)^2)
       pl_for_lossfun <- parlist[!grepl('beta', names(parlist))]
