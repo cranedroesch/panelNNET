@@ -126,7 +126,7 @@ predfun <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param = NULL,
   if (return_toplayer == TRUE){
     return(D)
   }
-  xpart <- MatMult(D, as.matrix(c(plist$beta_param, plist$beta))
+  xpart <- MatMult(D, as.matrix(c(plist$beta_param, plist$beta)))
   if (is.null(obj$fe)){
     yhat <- xpart
   } else {
