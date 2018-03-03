@@ -126,10 +126,10 @@ predfun <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param = NULL,
   if (return_toplayer == TRUE){
     return(D)
   }
+  xpart <- MatMult(D, as.matrix(c(plist$beta_param, plist$beta))
   if (is.null(obj$fe)){
-    yhat <- D %*% c(plist$beta_param, plist$beta)
+    yhat <- xpart
   } else {
-    xpart <- D %*% c(plist$beta_param, plist$beta)
     nd <- data.frame(fe.newX, xpart = as.numeric(xpart), id = 1:length(fe.newX))       
     nd <- merge(nd, FEs_to_merge, by.x = 'fe.newX', by.y = 'fe_var', all.x = TRUE, sort = FALSE)
     nd <- nd[order(nd$id),]
