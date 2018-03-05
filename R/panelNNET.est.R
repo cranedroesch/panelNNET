@@ -3,14 +3,115 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
          , start.LR, activation
          , batchsize, maxstopcounter, OLStrick, OLStrick_interval
          , initialization, dropout_hidden
-         , dropout_input, convolutional, LR_slowing_rate, return_best, ...){
+         , dropout_input, convolutional, LR_slowing_rate, return_best
+         , stop_early, ...){
 
+# rm(list=ls())
+# gc()
+# gc()
+# "%ni%" <- Negate("%in%")
+# mse <- function(x, y){mean((x-y)^2)}
+# 
+# library(devtools)
+# install_github("cranedroesch/panelNNET", ref = "reorder_backprop")
+# library(panelNNET)
+# library(doParallel)
+# library(doBy)
+# library(glmnet)
+# library(dplyr)
+# 
+# AWS <- grepl('ubuntu', getwd())
+# desktop <- grepl(':', getwd())
+# laptop <- grepl('/home/andrew', getwd())
+# if(AWS){
+#   setwd("/home/ubuntu/projdir")
+#   system("mkdir /home/ubuntu/projdir/outdir")
+#   outdir <- "/home/ubuntu/projdir/outdir"
+#   registerDoParallel(detectCores())
+# }
+# if(desktop){
+# }
+# if(laptop){
+#   setwd("/home/andrew/Dropbox/USDA/ARC/data")
+#   outdir <- "/home/andrew/Dropbox/USDA/ARC/output"
+#   registerDoParallel(detectCores())
+# }
+# cr <- "corn"
+# irrdry <- "dry"
+# # load data
+# if (cr == "corn"){dat <- readRDS("panel_corn.Rds")}
+# # dat <- subset(dat, state %in% c("17", "19"))
+# # irr/dry
+# if (irrdry == "irr"){
+#   dat <- dat[dat$prop_irr > .5,]
+#   registerDoParallel(detectCores())
+# } else {
+#   dat <- dat[dat$prop_irr < .5,]
+#   # registerDoParallel(64)
+# }
+# 
+# # make TAP variable
+# dat$TAP <- rowSums(dat[,grepl('precip', colnames(dat))])/1000
+# dat$TAP2 <- dat$TAP^2
+# # nonparametric
+# X <- dat[,grepl('year|SR|soil_|precip|sdsfia|wind|minat|maxat|minrh|maxrh|lat|lon|prop_irr',colnames(dat))]
+# X <- X[sapply(X, sd) > 0]
+# # PCA
+# PC <- readRDS(paste0("PCA_full_dataset.Rds"))
+# X <- PC$x[,cumsum((PC$sdev^2)/sum(PC$sdev^2))<.95]
+# 
+# # parametric
+# dat$y <- dat$year - min(dat$year) + 1
+# dat$y2 <- dat$y^2
+# 
+# # Xp <- cbind(dat[,c("y", "y2", "TAP", "TAP2")])
+# Xp <- cbind(dat[,c("y", "y2", "TAP", "TAP2")], dat[,grepl("SR", colnames(dat))])
+# Xp <- Xp[sapply(Xp, sd) > 0]
+# 
+# # OLS baseline
+# mm <- model.matrix(as.formula(paste0("~yield+y+y2+TAP+TAP2+",
+#                                      paste(colnames(dat)[grepl("SR", colnames(dat))], collapse = "+"),
+#                                      "-1")),
+#                    data = dat)
+# nfolds <- 96
+# SRoos <- foreach(i = 1:nfolds, .combine = c) %dopar% {
+#   # set.seed(i, kind = "L'Ecuyer-CMRG")
+#   # samp <- sample(unique(dat$year), replace = TRUE)
+#   # oosamp <- unique(dat$year)[unique(dat$year) %ni% samp]
+#   set.seed(i, kind = "L'Ecuyer-CMRG")
+#   samp <- sample(unique(dat$year), replace = TRUE)
+#   bsamp <- foreach(y = samp, .combine = c) %do% {which(dat$year == y)}
+#   oosamp <- unique(dat$year)[unique(dat$year) %ni% samp]
+#   # samp <- sort(unique(sample(unique(dat$year), replace = T)))
+#   # oosamp <- (1979:2016)[1979:2016 %ni% samp]
+#   mmis <- mm[bsamp,]
+#   dis <- as.data.frame(demeanlist(mmis, list(dat$fips[bsamp])))
+#   m <- glmnet(y = dis$yield, x = as.matrix(dis[,-1]), lambda = 0, intercept = FALSE)
+#   XB <- mm[dat$year %in% oosamp,-1] %*% coef(m)[-1,]
+#   fe <- (dat$yield[bsamp]-dis$yield) - (mmis[,-1]-as.matrix(dis[,-1])) %*% coef(m)[-1,]
+#   tm <- data.frame(fips = dat$fips[bsamp], fe = fe)
+#   tm <- tm[!duplicated(tm),]
+#   om <- data.frame(XB, fips = dat$fips[dat$year %in% oosamp], yield = dat$yield[dat$year %in% oosamp])
+#   pred <- merge(om, tm)
+#   pred$pred <- with(pred, fe+XB)
+#   mse((pred$yield), (pred$pred))
+# }
+# mean(SRoos)
+# # dry 386 for corn
+# 
+# g=1
+# set.seed(g, kind = "L'Ecuyer-CMRG")
+# samp <- sample(unique(dat$year), replace = TRUE)
+# bsamp <- foreach(y = samp, .combine = c) %do% {which(dat$year == y)}
+# oosamp <- unique(dat$year)[unique(dat$year) %ni% samp]
+# 
+# 
 # y = dat$yield[bsamp]
 # X = X[bsamp,]
-# hidden_units = rep(100, 10)
+# hidden_units = rep(10, 5)
 # fe_var = dat$fips[bsamp]
 # maxit = 10000
-# lam = lam
+# lam = .00001
 # time_var = dat$year[bsamp]
 # param = Xp[bsamp,]
 # verbose = T
@@ -19,11 +120,11 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # convtol = 1e-3
 # activation = 'lrelu'
 # start.LR = .0001
-# parlist = parlist
-# OLStrick = T
+# parlist = NULL
+# OLStrick = F
 # batchsize = 256
 # maxstopcounter = 25
-# parapen = c(0,0,rep(0, ncol(Xp)-2))
+# parapen = c(0,0,rep(1, ncol(Xp)-2))
 # RMSprop = TRUE
 # initialization = "HZRS"
 # dropout_hidden <- dropout_input <- 1
@@ -31,6 +132,12 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # LR_slowing_rate <- 2
 # return_best <- TRUE
 # OLStrick_interval <- 50
+# stop_early <- list(check_every = 1,
+#                    max_ES_stopcounter = 5,
+#                    y_test = dat$yield[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]],
+#                    X_test = as.matrix(X[dat$year %in% oosamp  & dat$fips %in% dat$fips[dat$year %in% samp],]),
+#                    P_test = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],]),
+#                    fe_test = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]])
 
   ##########
   #Define internal functions
@@ -284,6 +391,29 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   #start setup
   #get starting mse
   yhat <- as.numeric(getYhat(parlist, hlay = hlayers))
+  # if using early stopping, initialize object for passing to predict function
+  if (!is.null(stop_early)){
+    Zdm <- demeanlist(as.matrix(hlayers[[length(hlayers)]]), list(fe_var))
+    Zdm <- Matrix(Zdm)
+    fe <- (y-ydm) - MatMult(as.matrix(hlayers[[length(hlayers)]]-Zdm), as.matrix(c(
+      parlist$beta_param, parlist$beta
+    )))
+    fe_output <- data.frame(fe_var, fe)
+    pr_obj <- list(parlist = parlist,
+                   activation = activation,
+                   X = X,
+                   param = param,
+                   yhat = yhat,
+                   fe_var = unique(fe_var),
+                   fe = fe_output,
+                   convolutional = NULL,
+                   hidden_layers = hidden_units)
+    pr_test <- predict.panelNNET(obj = pr_obj, 
+                                 newX = stop_early$X_test, 
+                                 fe.newX = stop_early$fe_test, 
+                                 new.param = stop_early$P_test)
+    mse_test_vec <- mse_test <- msetest_old <- mean((stop_early$y_test-pr_test)^2)
+  } else {mse_test = NULL}
   mse <- mseold <- mean((y-yhat)^2)
   pl_for_lossfun <- parlist[!grepl('beta', names(parlist))]
   if (!is.null(convolutional)){
@@ -309,7 +439,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   } else {G2 <- NULL}
   # initialize terms used in the while loop
   D <- 1e6
-  stopcounter <- iter <- 0
+  ES_stopcounter <- stopcounter <- iter <- 0
   msevec <- lossvec <- c()
   lossvec <- append(lossvec, loss)
   msevec <- append(msevec, mse)
@@ -393,7 +523,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       }
       # Update parameters from update list
       parlist <- mapply('-', parlist, updates)
-      if (OLStrick == TRUE & iter %% OLStrick_interval == 1){ # do OLStrick on first iteration
+      if (OLStrick == TRUE & (iter %% OLStrick_interval == 0 | iter == 0)){ # do OLStrick on first iteration
         # Update hidden layers
         hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var,
                                 nlayers = nlayers, convolutional = convolutional, activ = activation)
@@ -401,7 +531,6 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
         parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
                                      , fe_var = fe_var, lam = lam, parapen = parapen)
       }
-
       #update yhat for purpose of computing loss function
       yhat <- getYhat(parlist, hlay = hlayers)
       mse <- mean((y-yhat)^2)
@@ -425,10 +554,6 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       oldmse <- msevec[length(msevec)]
       lossvec <- append(lossvec, loss)
       msevec <- append(msevec, mse)
-      # if achieving a new minimum, stash parlist in parlist_best
-      if (loss == min(lossvec)){
-        parlist_best <- parlist
-      }
       # depending on whether loss decreases, increase or decrease learning rate
       if (oldloss <= loss){
         LR <- LR/gravity^LR_slowing_rate
@@ -438,7 +563,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
         }
       } else { # if loss doesn't increase
         LR <- LR*gravity      #gravity...
-
+        
         # check for convergence
         D <- oldloss - loss
         if (D < convtol){
@@ -452,10 +577,46 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
             if(verbose == TRUE){
               print("loss been above minimum for > 2*maxstopcounter")
             }
+          }
+        }
+      }   
+      # check to see if early stopping is warranted
+      if (!is.null(stop_early) & (iter %% stop_early$check_every == 0 | iter == 0)){
+        Zdm <- demeanlist(as.matrix(hlayers[[length(hlayers)]]), list(fe_var))
+        Zdm <- Matrix(Zdm)
+        fe <- (y-ydm) - MatMult(as.matrix(hlayers[[length(hlayers)]]-Zdm), as.matrix(c(
+          parlist$beta_param, parlist$beta
+        )))
+        fe_output <- data.frame(fe_var, fe)
+        pr_obj$parlist <- parlist
+        pr_obj$fe <- fe_output
+        pr_test <- predict.panelNNET(obj = pr_obj, 
+                                     newX = stop_early$X_test, 
+                                     fe.newX = stop_early$fe_test, 
+                                     new.param = stop_early$P_test)
+        mse_test <- mean((stop_early$y_test-pr_test)^2)
+        mse_test_vec <- append(mse_test_vec, mse_test)
+        if (mse_test == min(mse_test_vec)){
+          parlist_best <- parlist
+          ES_stopcounter <- 0
+          if (verbose == TRUE){
+            print(paste0("new low in test set: ", mse_test))
+          }
+        } else {
+          ES_stopcounter <- ES_stopcounter + 1
+          if (ES_stopcounter > stop_early$max_ES_stopcounter){
+            if(verbose == TRUE){
+              print(paste0("test set MSE not improving after ", stop_early$max_ES_stopcounter, " checks"))
+            }
             stopcounter <- maxstopcounter+1
           }
         }
-      }        
+      } else { # if not doing early stopping, the best parlist is the one that attains the minimum
+        # if achieving a new minimum, stash parlist in parlist_best
+        if (loss == min(lossvec)){
+          parlist_best <- parlist
+        }
+      }
       LRvec[iter+1] <- LR
       # verbosity
       if  (verbose == TRUE & iter %% report_interval == 0){
@@ -477,7 +638,11 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
           , "*******************************************\n"  
         ))
         if (iter>1){
-          par(mfrow = c(3,2))
+          if (is.null(stop_early)){
+            par(mfrow = c(3,2))
+          } else {
+            par(mfrow = c(4,2))
+          }
           if(length(y)>5000){
             plot(1, cex = 0, main = "more than 5000 obs -- not plotting scatter")
           } else {
@@ -489,6 +654,10 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
             plot(msevec[pmax(2, length(msevec)-100):length(msevec)], type = 'l', ylab = 'mse', main = 'Last 100')
             plot(lossvec[-1], type = 'l', main = 'Loss history')
             plot(lossvec[pmax(2, length(lossvec)-100):length(lossvec)], type = 'l', ylab = 'loss', main = 'Last 100')
+            if (!is.null(stop_early)){
+              plot(mse_test_vec[-1], type = "l", col = "blue", main = "Test MSE")
+              plot(mse_test_vec[pmax(2, length(mse_test_vec)-100):length(mse_test_vec)], type = "l", col = "blue", main = "last 100")
+            }
           }
         }
       } # fi verbose 
@@ -551,7 +720,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     fe <- (y-ydm) - as.matrix(hlayers[[length(hlayers)]]-Zdm) %*% as.matrix(c(
         parlist$beta_param, parlist$beta
     ))
-  fe_output <- data.frame(fe_var, fe)
+    fe_output <- data.frame(fe_var, fe)
   }
   output <- list(yhat = yhat, parlist = parlist, hidden_layers = hlayers
     , fe = fe_output, converged = conv, mse = mse, loss = loss, lam = lam, time_var = time_var
@@ -559,7 +728,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     , msevec = msevec, RMSprop = RMSprop, convtol = convtol
     , grads = grads, activation = activation, parapen = parapen
     , batchsize = batchsize, initialization = initialization, convolutional = convolutional
-    , dropout_hidden = dropout_hidden, dropout_input = dropout_input)
+    , dropout_hidden = dropout_hidden, dropout_input = dropout_input, mse_test = mse_test)
   return(output) # list 
 }
 

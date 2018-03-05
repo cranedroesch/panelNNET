@@ -7,7 +7,7 @@ Author: Andrew Crane-Droesch
 Maintainer: Andrew Crane-Droesch <andrew.crane-droesch@ers.usda.gov>
 Description: Fits fixed-effects models for panel data, in which some terms may enter linearly and others may enter non-parametrically.  The nonparametric terms are represented by either feed-forward or convolutional neural networks, with arbitrarily-many hidden layers and hidden units per layer.  Disclaimer:  this code is that of the author and should not be attributed to the Economic Research Service or USDA.
 License: GPL (>= 2)
-Depends: lfe, foreach, MASS, Matrix
+Depends: lfe, foreach, MASS, Matrix, doBy
 Imports: Rcpp (>= 0.12.13), RcppEigen (>= 0.3.3.3.0)
 LinkingTo: Rcpp, RcppEigen
 RoxygenNote: 6.0.1

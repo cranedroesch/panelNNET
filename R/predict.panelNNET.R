@@ -5,11 +5,12 @@
 predict.panelNNET <-
 function(obj, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
          , numerical_jacobian = FALSE, parallel_jacobian = FALSE, convolutional = NULL){
-# obj = pnn
-# newX = Z[v,]
-# new.param = P[v,]
-# fe.newX = id[v]
-# se.fit = T
+# obj = pr_obj
+# newX = stop_early$X_test
+# fe.newX = stop_early$fe_test
+# new.param = stop_early$P_test
+# se_fit = F
+# convolutional = NULL
   if (obj$activation == 'tanh'){
     activ <- tanh
   }
@@ -33,11 +34,14 @@ function(obj, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
     pvec <- unlist(plist)
     #prepare fe's in advance...
     if (!is.null(obj$fe)){
-      FEs_to_merge <- foreach(i = 1:length(unique(obj$fe$fe_var)), .combine = rbind) %do% {
-        #Because of numerical error, fixed effects within units can sometimes be slightly different.  This averages them.
-        data.frame(unique(obj$fe$fe_var)[i], mean(obj$fe$fe[obj$fe$fe_var == unique(obj$fe$fe_var)[i]]))
-      }
-      colnames(FEs_to_merge) <- c('fe_var','fe')
+      # OLD version here is mega-slow:
+      # FEs_to_merge_o <- foreach(i = 1:length(unique(obj$fe$fe_var)), .combine = rbind) %do% {
+      #   #Because of numerical error, fixed effects within units can sometimes be slightly different.  This averages them.
+      #   data.frame(unique(obj$fe$fe_var)[i], mean(obj$fe$fe[obj$fe$fe_var == unique(obj$fe$fe_var)[i]]))
+      # }
+      # colnames(FEs_to_merge_o) <- c('fe_var','fe')
+      # new version is faster but depends on doBy package:
+      FEs_to_merge <- summaryBy(fe~fe_var, data = obj$fe, keep.names = T)
     } else {FEs_to_merge <- NULL}
     #(predfun is defined below)
     yhat <- predfun(plist = plist, obj = obj, newX = newX, fe.newX = fe.newX
