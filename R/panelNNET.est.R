@@ -657,7 +657,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
             plot(lossvec[-1], type = 'l', main = 'Loss history')
             plot(lossvec[pmax(2, length(lossvec)-100):length(lossvec)], type = 'l', ylab = 'loss', main = 'Last 100')
             if (!is.null(stop_early)){
-              plot(mse_test_vec[-1], type = "l", col = "blue", main = "Test MSE")
+              plot(mse_test_vec, type = "l", col = "blue", main = "Test MSE")
               plot(mse_test_vec[pmax(1, length(mse_test_vec)-100):length(mse_test_vec)], type = "l", col = "blue", main = "last 100")
             }
           }
