@@ -581,34 +581,36 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
         }
       }   
       # check to see if early stopping is warranted
-      if (!is.null(stop_early) & (iter %% stop_early$check_every == 0 | iter == 0)){
-        Zdm <- demeanlist(as.matrix(hlayers[[length(hlayers)]]), list(fe_var))
-        Zdm <- Matrix(Zdm)
-        fe <- (y-ydm) - MatMult(as.matrix(hlayers[[length(hlayers)]]-Zdm), as.matrix(c(
-          parlist$beta_param, parlist$beta
-        )))
-        fe_output <- data.frame(fe_var, fe)
-        pr_obj$parlist <- parlist
-        pr_obj$fe <- fe_output
-        pr_test <- predict.panelNNET(obj = pr_obj, 
-                                     newX = stop_early$X_test, 
-                                     fe.newX = stop_early$fe_test, 
-                                     new.param = stop_early$P_test)
-        mse_test <- mean((stop_early$y_test-pr_test)^2)
-        mse_test_vec <- append(mse_test_vec, mse_test)
-        if (mse_test == min(mse_test_vec)){
-          parlist_best <- parlist
-          ES_stopcounter <- 0
-          if (verbose == TRUE){
-            print(paste0("new low in test set: ", mse_test))
-          }
-        } else {
-          ES_stopcounter <- ES_stopcounter + 1
-          if (ES_stopcounter > stop_early$max_ES_stopcounter){
-            if(verbose == TRUE){
-              print(paste0("test set MSE not improving after ", stop_early$max_ES_stopcounter, " checks"))
+      if (!is.null(stop_early)){
+        if (iter %% stop_early$check_every == 0 | iter == 0){
+          Zdm <- demeanlist(as.matrix(hlayers[[length(hlayers)]]), list(fe_var))
+          Zdm <- Matrix(Zdm)
+          fe <- (y-ydm) - MatMult(as.matrix(hlayers[[length(hlayers)]]-Zdm), as.matrix(c(
+            parlist$beta_param, parlist$beta
+          )))
+          fe_output <- data.frame(fe_var, fe)
+          pr_obj$parlist <- parlist
+          pr_obj$fe <- fe_output
+          pr_test <- predict.panelNNET(obj = pr_obj, 
+                                       newX = stop_early$X_test, 
+                                       fe.newX = stop_early$fe_test, 
+                                       new.param = stop_early$P_test)
+          mse_test <- mean((stop_early$y_test-pr_test)^2)
+          mse_test_vec <- append(mse_test_vec, mse_test)
+          if (mse_test == min(mse_test_vec)){
+            parlist_best <- parlist
+            ES_stopcounter <- 0
+            if (verbose == TRUE){
+              print(paste0("new low in test set: ", mse_test))
             }
-            stopcounter <- maxstopcounter+1
+          } else {
+            ES_stopcounter <- ES_stopcounter + 1
+            if (ES_stopcounter > stop_early$max_ES_stopcounter){
+              if(verbose == TRUE){
+                print(paste0("test set MSE not improving after ", stop_early$max_ES_stopcounter, " checks"))
+              }
+              stopcounter <- maxstopcounter+1
+            }
           }
         }
       } else { # if not doing early stopping, the best parlist is the one that attains the minimum
@@ -656,7 +658,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
             plot(lossvec[pmax(2, length(lossvec)-100):length(lossvec)], type = 'l', ylab = 'loss', main = 'Last 100')
             if (!is.null(stop_early)){
               plot(mse_test_vec[-1], type = "l", col = "blue", main = "Test MSE")
-              plot(mse_test_vec[pmax(2, length(mse_test_vec)-100):length(mse_test_vec)], type = "l", col = "blue", main = "last 100")
+              plot(mse_test_vec[pmax(1, length(mse_test_vec)-100):length(mse_test_vec)], type = "l", col = "blue", main = "last 100")
             }
           }
         }
@@ -728,7 +730,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     , msevec = msevec, RMSprop = RMSprop, convtol = convtol
     , grads = grads, activation = activation, parapen = parapen
     , batchsize = batchsize, initialization = initialization, convolutional = convolutional
-    , dropout_hidden = dropout_hidden, dropout_input = dropout_input, mse_test = mse_test)
+    , dropout_hidden = dropout_hidden, dropout_input = dropout_input, mse_test = min(mse_test_vec))
   return(output) # list 
 }
 
