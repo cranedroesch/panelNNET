@@ -413,7 +413,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                                  fe.newX = stop_early$fe_test, 
                                  new.param = stop_early$P_test)
     mse_test_vec <- mse_test <- msetest_old <- mean((stop_early$y_test-pr_test)^2)
-  } else {mse_test = NULL}
+  } else {mse_test <- best_mse <- NULL}
   mse <- mseold <- mean((y-yhat)^2)
   pl_for_lossfun <- parlist[!grepl('beta', names(parlist))]
   if (!is.null(convolutional)){
