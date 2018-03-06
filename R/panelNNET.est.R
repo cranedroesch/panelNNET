@@ -600,6 +600,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
           if (mse_test == min(mse_test_vec)){
             parlist_best <- parlist
             ES_stopcounter <- 0
+            best_mse <- mse_test
             if (verbose == TRUE){
               print(paste0("new low in test set: ", mse_test))
             }
@@ -730,7 +731,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     , msevec = msevec, RMSprop = RMSprop, convtol = convtol
     , grads = grads, activation = activation, parapen = parapen
     , batchsize = batchsize, initialization = initialization, convolutional = convolutional
-    , dropout_hidden = dropout_hidden, dropout_input = dropout_input, mse_test = min(mse_test_vec))
+    , dropout_hidden = dropout_hidden, dropout_input = dropout_input, mse_test = best_mse)
   return(output) # list 
 }
 
