@@ -584,6 +584,8 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       # check to see if early stopping is warranted
       if (!is.null(stop_early)){
         if (iter %% stop_early$check_every == 0 | iter == 0){
+          hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var,
+                                  nlayers = nlayers, convolutional = convolutional, activ = activation)
           Zdm <- demeanlist(as.matrix(hlayers[[length(hlayers)]]), list(fe_var))
           Zdm <- Matrix(Zdm)
           fe <- (y-ydm) - MatMult(as.matrix(hlayers[[length(hlayers)]]-Zdm), as.matrix(c(
