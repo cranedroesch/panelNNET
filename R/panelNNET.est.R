@@ -1,10 +1,10 @@
-# panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parlist
-#          , verbose, report_interval, gravity, convtol, RMSprop
-#          , start.LR, activation
-#          , batchsize, maxstopcounter, OLStrick, OLStrick_interval
-#          , initialization, dropout_hidden
-#          , dropout_input, convolutional, LR_slowing_rate, return_best
-#          , stop_early, ...){
+panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parlist
+         , verbose, report_interval, gravity, convtol, RMSprop
+         , start.LR, activation
+         , batchsize, maxstopcounter, OLStrick, OLStrick_interval
+         , initialization, dropout_hidden
+         , dropout_input, convolutional, LR_slowing_rate, return_best
+         , stop_early, ...){
 
   #######################################
   # bayesian hyperparameter search on PCs, doing the PCA train/test split appropriately
