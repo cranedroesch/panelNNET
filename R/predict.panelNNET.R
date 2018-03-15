@@ -116,7 +116,7 @@ predfun <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param = NULL,
                MARGIN = 2, 
                STATS = attr(obj$param, "scaled:scale"), 
                FUN = '/')
-  }
+  } else {P <- NULL}
   # compute hidden layers
   HL <- calc_hlayers(parlist = obj$parlist, 
                     X = D, 
