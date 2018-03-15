@@ -197,21 +197,23 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     grads <- grad_stubs <- vector('list', NL + 1)
 print(dim(CB(as.matrix(y))))
 print(length(yhat))
-yy <<- yhat
-    grad_stubs[[length(grad_stubs)]] <<- getDelta(CB(as.matrix(y)), yhat)
+yy <- yhat
+    grad_stubs[[length(grad_stubs)]] <- getDelta(CB(as.matrix(y)), yhat)
     for (i in NL:1){
-print(i)
       if (i == NL){outer_param = as.matrix(c(plist$beta))} else {outer_param = plist[[i+1]]}
       if (i == 1){lay = CB(Xd)} else {lay= CB(hlay[[i-1]])}
-      #add the bias  
-pl <<- plist
-      lay <<- cbind(1, lay) #add bias to the hidden layer
-      if (i != NL){outer_param <<- outer_param[-1,, drop = FALSE]}      #remove parameter on upper-layer bias term
-      grad_stubs[[i]] <<- activ_prime(MatMult(lay, plist[[i]])) * MatMult(grad_stubs[[i+1]], Matrix::t(outer_param))
+      #add the bias
+      lay <- cbind(1, lay) #add bias to the hidden layer
+      if (i != NL){outer_param <- outer_param[-1,, drop = FALSE]}      #remove parameter on upper-layer bias term
+print(dim(lay))
+print(lapply(grad_stubs, dim))
+print(lapply(plist, dim))
+print(dim(as.matrix(outer_param)))
+      grad_stubs[[i]] <- activ_prime(MatMult(lay, plist[[i]])) * MatMult(grad_stubs[[i+1]], Matrix::t(outer_param))
     }
     # multiply the gradient stubs by their respective layers to get the actual gradients
     # first coerce them to regular matrix classes so that the C code for matrix multiplication can speed things up
-    grad_stubs <<- lapply(grad_stubs, as.matrix)
+    grad_stubs <- lapply(grad_stubs, as.matrix)
     hlay <- lapply(hlay, as.matrix)
     for (i in 1:length(grad_stubs)){
       if (i == 1){lay = as.matrix(CB(Xd))} else {lay= CB(hlay[[i-1]])}
