@@ -203,7 +203,7 @@ yy <<- yhat
 print(i)
       if (i == NL){outer_param = as.matrix(c(plist$beta))} else {outer_param = plist[[i+1]]}
       if (i == 1){lay = CB(Xd)} else {lay= CB(hlay[[i-1]])}
-      #add the bias
+      #add the bias  
 pl <<- plist
       lay <<- cbind(1, lay) #add bias to the hidden layer
       if (i != NL){outer_param <<- outer_param[-1,, drop = FALSE]}      #remove parameter on upper-layer bias term
