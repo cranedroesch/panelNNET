@@ -128,7 +128,8 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # 
 # RMSprop = TRUE
 # initialization = "HZRS"
-# dropout_hidden <- dropout_input <- 1
+# dropout_hidden <- .8
+#   dropout_input <- .5
 # convolutional <- NULL
 # LR_slowing_rate <- 2
 # return_best <- TRUE
@@ -179,25 +180,21 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
           }
         }
         plist[[nlayers]] <- plist[[nlayers]][c(TRUE, droplist[[nlayers-1]]), 
-                                             droplist[[nlayers]][(ncol(param)+1):length(droplist[[nlayers]])], 
+                                             droplist[[nlayers]][(length(parlist$beta_param)+1):length(droplist[[nlayers]])], 
                                              drop = FALSE]
       } else { #for one-layer networks
         #drop from parameter list emanating from input
         plist[[1]] <- plist[[1]][c(TRUE,dropinp),
-                                 droplist[[nlayers]][(ncol(param)+1):length(droplist[[nlayers]])], 
+                                 droplist[[nlayers]][(length(parlist$beta_param)+1):length(droplist[[nlayers]])], 
                                  drop = FALSE]
       }
       # manage parametric/nonparametric distinction in the top layer
-      plist$beta <- plist$beta[droplist[[nlayers]][(ncol(param)+1):length(droplist[[nlayers]])]]
-      
+      plist$beta <- plist$beta[droplist[[nlayers]][(length(parlist$beta_param)+1):length(droplist[[nlayers]])]]
     } else {Xd <- X}#for use below...  X should be safe given scope, but extra assignment is cheap here
     if (!is.null(curBat)){CB <- function(x){x[curBat,,drop = FALSE]}} else {CB <- function(x){x}}
     if (is.null(yhat)){yhat <- getYhat(plist, hlay = hlay)}
     NL <- nlayers + as.numeric(!is.null(convolutional))
     grads <- grad_stubs <- vector('list', NL + 1)
-# print(dim(CB(as.matrix(y))))
-# print(length(yhat))
-# yy <- yhat
     grad_stubs[[length(grad_stubs)]] <- getDelta(CB(as.matrix(y)), yhat)
     for (i in NL:1){
       # print(i)
@@ -206,10 +203,6 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       #add the bias
       lay <- cbind(1, lay) #add bias to the hidden layer
       if (i != NL){outer_param <- outer_param[-1,, drop = FALSE]}      #remove parameter on upper-layer bias term
-# print(dim(lay))
-# print(lapply(grad_stubs, dim))
-# print(lapply(plist, dim))
-# print(dim(as.matrix(outer_param)))
       grad_stubs[[i]] <- activ_prime(MatMult(lay, plist[[i]])) * MatMult(grad_stubs[[i+1]], Matrix::t(outer_param))
     }
     # multiply the gradient stubs by their respective layers to get the actual gradients
@@ -235,10 +228,10 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
           }
         }
         emptygrads[[nlayers]][c(TRUE, droplist[[nlayers-1]]), 
-                               droplist[[nlayers]][(ncol(param)+1):length(droplist[[nlayers]])]] <- grads[[nlayers]]
+                               droplist[[nlayers]][(length(parlist$beta_param)+1):length(droplist[[nlayers]])]] <- grads[[nlayers]]
       } else { #for one-layer networks
         emptygrads[[1]][c(TRUE,dropinp),
-                        droplist[[1]][(ncol(param)+1):length(droplist[[1]])]] <- grads[[1]]
+                        droplist[[1]][(length(parlist$beta_param)+1):length(droplist[[1]])]] <- grads[[1]]
       }
       #top-level
       emptygrads$beta <- emptygrads$beta_param <- NULL
@@ -492,7 +485,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
           return(todrop)
         })
         # remove the parametric terms from dropout contention
-        droplist[[nlayers]][1:ncol(param)] <- TRUE
+        droplist[[nlayers]][1:length(parlist$beta_param)] <- TRUE
         # dropout from the input layer
         todrop <- rbinom(ncol(X), 1, dropout_input)
         if (all(todrop==FALSE)){# ensure that at least one unit is present
