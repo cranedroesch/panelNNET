@@ -386,15 +386,13 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     }
     #add the bias term/intercept onto the front, if there are no FE's
     parlist$beta_param <- c(runif(is.null(fe_var), -ubounds, ubounds), parlist$beta_param)
-    #if there are no FE's, append a 0 to the front of the parapen vec, to leave the intercept unpenalized
-    if(is.null(fe_var) & !is.null(param)){
-      parapen <- c(0, parapen)
-    }
-    if(is.null(fe_var) & is.null(param)){
-      parapen <- 0
-      print(parapen)
-      print(beta$param)
-    }
+  }
+  #if there are no FE's, append a 0 to the front of the parapen vec, to leave the intercept unpenalized
+  if(is.null(fe_var) & !is.null(param)){
+    parapen <- c(0, parapen)
+  }
+  if(is.null(fe_var) & is.null(param)){
+    parapen <- 0
   }
   #compute hidden layers given parlist
   hlayers <- calc_hlayers(parlist, X = X, param = param, 
