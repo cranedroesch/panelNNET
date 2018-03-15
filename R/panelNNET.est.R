@@ -196,7 +196,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     NL <- nlayers + as.numeric(!is.null(convolutional))
     grads <- grad_stubs <- vector('list', NL + 1)
     print(dim(CB(as.matrix(y))))
-    print(dim(yhat))
+    print(length(yhat))
     grad_stubs[[length(grad_stubs)]] <- getDelta(CB(as.matrix(y)), yhat)
     for (i in NL:1){
       if (i == NL){outer_param = as.matrix(c(plist$beta))} else {outer_param = plist[[i+1]]}
