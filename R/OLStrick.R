@@ -7,6 +7,7 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
   # lam <- pnn$lam
   # parapen <- pnn$parapen
   # hidden_layers <- hlayers
+print(parapen)
   constraint <- sum(c(parlist$beta_param*parapen, parlist$beta)^2)
   #getting implicit regressors depending on whether regression is panel
   if (!is.null(fe_var)){
