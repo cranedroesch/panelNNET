@@ -200,7 +200,8 @@ print(length(yhat))
 yy <- yhat
     grad_stubs[[length(grad_stubs)]] <- getDelta(CB(as.matrix(y)), yhat)
     for (i in NL:1){
-      if (i == NL){outer_param = as.matrix(c(plist$beta))} else {outer_param = plist[[i+1]]}
+      print(i)
+      if (i == NL){print("AAA"); outer_param = as.matrix(c(plist$beta))} else {print("BBB"); outer_param = plist[[i+1]]}
       if (i == 1){lay = CB(Xd)} else {lay= CB(hlay[[i-1]])}
       #add the bias
       lay <- cbind(1, lay) #add bias to the hidden layer
