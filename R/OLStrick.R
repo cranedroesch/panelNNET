@@ -1,5 +1,5 @@
 
-OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
+OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, penalize_toplayer, nlayers){
   # parlist <- pnn$parlist
   # hidden_layers <- pnn$hidden_layers
   # y = pnn$y
@@ -7,8 +7,26 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen){
   # lam <- pnn$lam
   # parapen <- pnn$parapen
   # hidden_layers <- hlayers
-  constraint <- sum(c(parlist$beta_param*parapen, parlist$beta)^2)
+  if (names(parlist)[[1]] == "p1"){
+    const <- parlist$beta_param*parapen
+    if (penalize_toplayer == TRUE){
+      for (i in 1:(length(parlist)-1)){
+        const <- c(const, parlist[[i]]$beta)
+      }
+    }
+    constraint <- sum(const^2)
+    Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
+      hlay[[i]][[length(hlay[[i]])]]
+    }
+    LEFT OFF HERE
+    
+  } else {
+    constraint <- sum(c(parlist$beta_param*parapen, parlist$beta)^2)    
+  }
+
   #getting implicit regressors depending on whether regression is panel
+  
+
   if (!is.null(fe_var)){
     Zdm <- demeanlist(as.matrix(hidden_layers[[length(hidden_layers)]]), list(fe_var))
     targ <- demeanlist(y, list(fe_var))

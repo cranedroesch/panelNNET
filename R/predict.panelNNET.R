@@ -44,8 +44,13 @@ function(obj, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
       FEs_to_merge <- summaryBy(fe~fe_var, data = obj$fe, keep.names = T)
     } else {FEs_to_merge <- NULL}
     #(predfun is defined below)
-    yhat <- predfun(plist = plist, obj = obj, newX = newX, fe.newX = fe.newX
-      , new.param = new.param, FEs_to_merge = FEs_to_merge)
+    if (length(nlayers)>1){
+      yhat <- predfun_multinet(plist = plist, obj = obj, newX = newX, fe.newX = fe.newX
+                      , new.param = new.param, FEs_to_merge = FEs_to_merge) 
+    } else {
+      yhat <- predfun(plist = plist, obj = obj, newX = newX, fe.newX = fe.newX
+                      , new.param = new.param, FEs_to_merge = FEs_to_merge)
+    }
     if (se.fit == FALSE){
       return(yhat)
     } else {
@@ -90,6 +95,62 @@ function(obj, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
     return(cbind(yhat, semat))
   }
 }
+
+#prediction function, potentially for the Jacobian
+predfun_multinet <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param = NULL,
+                    FEs_to_merge = NULL, return_toplayer = FALSE, convolutional = NULL){
+  if (obj$activation == 'tanh'){
+    activ <- tanh
+  }
+  if (obj$activation == 'logistic'){
+    activ <- logistic
+  }
+  if (obj$activation == 'relu'){
+    activ <- relu
+  }
+  if (obj$activation == 'lrelu'){
+    activ <- lrelu
+  }
+  # rescale new data to scale of training data
+  D <- foreach(i = 1:length(obj$X)) %do% {
+    sweep(sweep(newX[[i]], 2, STATS = attr(obj$X[[i]], "scaled:center"), FUN = '-'), 2, STATS = attr(obj$X[[i]], "scaled:scale"), FUN = '/')
+  }
+  if (!is.null(obj$param)){
+    P <- sweep(sweep(new.param, 
+                     MARGIN = 2, 
+                     STATS = attr(obj$param, "scaled:center"), 
+                     FUN = '-'), 
+               MARGIN = 2, 
+               STATS = attr(obj$param, "scaled:scale"), 
+               FUN = '/')
+  } else {P <- NULL}
+  # compute hidden layers
+  HL <- calc_hlayers(parlist = obj$parlist, 
+                     X = D, 
+                     param = P, 
+                     fe_var = obj$fe_var, 
+                     nlayers = sapply(obj$hidden_layers, length),
+                     activation = obj$activation)
+  D <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
+    HL[[i]][[length(HL[[i]])]]
+  }
+  if (return_toplayer == TRUE){
+    return(D)
+  }
+  B <- foreach(i = 1:length(nlayers), .combine = c) %do% {obj$parlist[[i]]$beta}
+  xpart <- MatMult(D, B)
+  if (is.null(obj$fe)){
+    yhat <- xpart
+  } else {
+    nd <- data.frame(fe.newX, xpart = as.numeric(xpart), id = 1:length(fe.newX))       
+    nd <- merge(nd, FEs_to_merge, by.x = 'fe.newX', by.y = 'fe_var', all.x = TRUE, sort = FALSE)
+    nd <- nd[order(nd$id),]
+    yhat <- nd$fe + nd$xpart
+  }
+  #otherwise...
+  return(yhat)
+}
+
 
 #prediction function, potentially for the Jacobian
 predfun <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param = NULL,

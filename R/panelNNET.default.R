@@ -1,7 +1,8 @@
 panelNNET.default <-
 function(y, X, hidden_units, fe_var
   , maxit, lam = 0, time_var = NULL, param = NULL
-  , parapen = rep(0, ncol(param)), parlist = NULL, verbose = FALSE
+  , parapen = rep(0, ncol(param)), penalize_toplayer = TRUE
+  , parlist = NULL, verbose = FALSE
   , report_interval = 100
   , gravity = 1.01, convtol = 1e-8, RMSprop = TRUE, start_LR = .01
   , activation = 'relu'
@@ -12,7 +13,7 @@ function(y, X, hidden_units, fe_var
   , convolutional = NULL, LR_slowing_rate = 2, return_best = TRUE, stop_early = NULL, ...)
 {
   out <- panelNNET.est(y, X, hidden_units, fe_var, maxit, lam
-    , time_var, param, parapen, parlist, verbose
+    , time_var, param, parapen, penalize_toplayer, parlist, verbose
     , report_interval, gravity, convtol, RMSprop
     , start_LR, activation 
     , batchsize, maxstopcounter
