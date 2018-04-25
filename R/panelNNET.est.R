@@ -1,15 +1,15 @@
-panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parlist
-         , verbose, report_interval, gravity, convtol, RMSprop
-         , start.LR, activation
-         , batchsize, maxstopcounter, OLStrick, OLStrick_interval
-         , initialization, dropout_hidden
-         , dropout_input, convolutional, LR_slowing_rate, return_best
-         , stop_early, ...){
+# panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, parapen, parlist
+#          , verbose, report_interval, gravity, convtol, RMSprop
+#          , start.LR, activation
+#          , batchsize, maxstopcounter, OLStrick, OLStrick_interval
+#          , initialization, dropout_hidden
+#          , dropout_input, convolutional, LR_slowing_rate, return_best
+#          , stop_early, ...){
 
-  #######################################
-  # bayesian hyperparameter search on PCs, doing the PCA train/test split appropriately
-  # NO PARAMETRIC TERMS
-  
+#   #######################################
+#   # bayesian hyperparameter search on PCs, doing the PCA train/test split appropriately
+#   # NO PARAMETRIC TERMS
+#   
 #   rm(list=ls())
 #   gc()
 #   gc()
@@ -17,7 +17,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 #   mse <- function(x, y){mean((x-y)^2)}
 # 
 #   library(devtools)
-#   install_github("cranedroesch/panelNNET", ref = "fixing_nopar", force = F)
+#   # install_github("cranedroesch/panelNNET", ref = "fixing_nopar", force = F)
 #   library(panelNNET)
 #   library(doParallel)
 #   library(doBy)
@@ -526,8 +526,13 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       }
       # weight decay
       if (lam != 0) {
-        wd <- lapply(parlist, function(x){x*lam*LR})
-        updates <- mapply("+", updates, wd)
+        # make a mask for parameters that don't get penalized
+        ppmask <- rapply(parlist, function(x){x^0}, how = "list")
+        ppmask$beta_param <- ppmask$beta_param*parapen
+        wd <- rapply(parlist, function(x){x*lam*LR}, how = "list")
+        wd <- mapply("*", wd, ppmask)
+        # apply weight decay
+        updates <- mapply("+",updates, wd)
         # don't update the pass-through weights for the non-time-varying variables when using conv 
         if (!is.null(convolutional)){
           updates[[1]][,colnames(updates[[1]]) %ni% convolutional$topology] <- 0
