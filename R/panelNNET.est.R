@@ -1,88 +1,88 @@
-# panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, 
-#                           parapen, penalize_toplayer, parlist, verbose, 
-#                           report_interval, gravity, convtol, RMSprop, start.LR, 
-#                           activation, batchsize, maxstopcounter, OLStrick, OLStrick_interval, 
-#                           initialization, dropout_hidden, dropout_input, convolutional, 
-#                           LR_slowing_rate, return_best, stop_early, ...){
+panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param,
+                          parapen, penalize_toplayer, parlist, verbose,
+                          report_interval, gravity, convtol, RMSprop, start.LR,
+                          activation, batchsize, maxstopcounter, OLStrick, OLStrick_interval,
+                          initialization, dropout_hidden, dropout_input, convolutional,
+                          LR_slowing_rate, return_best, stop_early, ...){
 
-rm(list=ls())
-gc()
-gc()
-"%ni%" <- Negate("%in%")
-mse <- function(x, y){mean((x-y)^2)}
-
-library(devtools)
-install_github("cranedroesch/panelNNET", ref = "earlystop", force = F)
-library(panelNNET)
-library(doParallel)
-library(doBy)
-library(glmnet)
-library(dplyr)
-library(randomForest)
-library(splines)
-
-AWS <- grepl('ubuntu', getwd())
-desktop <- grepl(':', getwd())
-laptop <- grepl('/home/andrew', getwd())
-if(AWS){
-  setwd("/home/ubuntu/projdir")
-  outdir <- "/home/ubuntu/projdir/outdir"
-  registerDoParallel(detectCores())
-}
-if(desktop){
-}
-if(laptop){
-  setwd("/home/andrew/Dropbox/USDA/ARC/data")
-  outdir <- "/home/andrew/Dropbox/USDA/ARC/output"
-  registerDoParallel(detectCores())
-}
-dat <- readRDS("panel_corn.Rds")
-dat <- subset(dat, state %in% c("17", "19"))
-X1 <- dat[,paste0("maxat_jday_", 200:215)]
-X2 <- dat[,paste0("precip_jday_", 200:215)]
-dat$y <- dat$year - min(dat$year) + 1
-dat$y2 <- dat$y^2
-Xp <- dat[,c("y", "y2")]
-Xp <- Xp[sapply(Xp, sd) > 0]
-
-is <- dat$year%%2==1
-oos <- is == F
-y = dat$yield[is]
-X = list(X1[is,], X2[is,])
-hidden_units = list(c(10, 2), c(8, 4))
-fe_var = dat$fips[is]
-maxit = 1000
-lam = .001
-time_var = dat$year[is]
-param = Xp[is,]
-verbose = T
-report_interval = 1
-gravity = 1.01
-convtol = 1e-3
-activation = 'lrelu'
-start.LR = .01
-parlist = NULL
-OLStrick = TRUE
-OLStrick_interval = 25
-batchsize = 256
-maxstopcounter = 25
-LR_slowing_rate = 2
-parapen = c(0,0)
-penalize_toplayer = FALSE
-return_best = TRUE
-
-RMSprop = T
-batchsize = 48
-initialization = "HZRS"
-dropout_hidden <- dropout_input <- 1
-convolutional <- NULL
-
-stop_early = list(check_every = 20,
-                  max_ES_stopcounter = 5,
-                  y_test = dat$yield[oos],
-                  X_test = list(X1[oos,], X2[oos,]),
-                  P_test = as.matrix(Xp[oos,]),
-                  fe_test = dat$fips[oos])
+# rm(list=ls())
+# gc()
+# gc()
+# "%ni%" <- Negate("%in%")
+# mse <- function(x, y){mean((x-y)^2)}
+# 
+# library(devtools)
+# # install_github("cranedroesch/panelNNET", ref = "earlystop", force = F)
+# library(panelNNET)
+# library(doParallel)
+# library(doBy)
+# library(glmnet)
+# library(dplyr)
+# library(randomForest)
+# library(splines)
+# 
+# AWS <- grepl('ubuntu', getwd())
+# desktop <- grepl(':', getwd())
+# laptop <- grepl('/home/andrew', getwd())
+# if(AWS){
+#   setwd("/home/ubuntu/projdir")
+#   outdir <- "/home/ubuntu/projdir/outdir"
+#   registerDoParallel(detectCores())
+# }
+# if(desktop){
+# }
+# if(laptop){
+#   setwd("/home/andrew/Dropbox/USDA/ARC/data")
+#   outdir <- "/home/andrew/Dropbox/USDA/ARC/output"
+#   registerDoParallel(detectCores())
+# }
+# dat <- readRDS("panel_corn.Rds")
+# dat <- subset(dat, state %in% c("17", "19"))
+# X1 <- dat[,paste0("maxat_jday_", 200:215)]
+# X2 <- dat[,paste0("precip_jday_", 200:215)]
+# dat$y <- dat$year - min(dat$year) + 1
+# dat$y2 <- dat$y^2
+# Xp <- dat[,c("y", "y2")]
+# Xp <- Xp[sapply(Xp, sd) > 0]
+# 
+# is <- dat$year%%2==1
+# oos <- is == F
+# y = dat$yield[is]
+# X = list(X1[is,], X2[is,])
+# hidden_units = list(c(10, 2), c(8, 4))
+# fe_var = dat$fips[is]
+# maxit = 1000
+# lam = .001
+# time_var = dat$year[is]
+# param = Xp[is,]
+# verbose = T
+# report_interval = 1
+# gravity = 1.01
+# convtol = 1e-3
+# activation = 'lrelu'
+# start.LR = .01
+# parlist = NULL
+# OLStrick = TRUE
+# OLStrick_interval = 25
+# batchsize = 256
+# maxstopcounter = 25
+# LR_slowing_rate = 2
+# parapen = c(0,0)
+# penalize_toplayer = FALSE
+# return_best = TRUE
+# 
+# RMSprop = T
+# batchsize = 48
+# initialization = "HZRS"
+# dropout_hidden <- dropout_input <- 1
+# convolutional <- NULL
+# 
+# stop_early = list(check_every = 20,
+#                   max_ES_stopcounter = 5,
+#                   y_test = dat$yield[oos],
+#                   X_test = list(X1[oos,], X2[oos,]),
+#                   P_test = as.matrix(Xp[oos,]),
+#                   fe_test = dat$fips[oos])
 
 # panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, 
 #                           parapen, penalize_toplayer, parlist, verbose, 
@@ -513,6 +513,19 @@ stop_early = list(check_every = 20,
   lossvec <- append(lossvec, loss)
   msevec <- append(msevec, mse)
   parlist_best <- parlist
+  
+  # start with an OLStrick, before calculating the gradients
+  if (OLStrick == TRUE & (iter %% OLStrick_interval == 0 | iter == 0)){ # do OLStrick on first iteration
+    # Update hidden layers
+    hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var,
+                            nlayers = nlayers, convolutional = convolutional, activ = activation)
+    # OLS trick!
+    parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
+                                 , fe_var = fe_var, lam = lam, parapen = parapen
+                                 , penalize_toplayer, nlayers = nlayers)
+  }
+  
+  
   ###############
   #start iterating
   while(iter < maxit & stopcounter < maxstopcounter){
@@ -615,30 +628,29 @@ stop_early = list(check_every = 20,
         hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var,
                                 nlayers = nlayers, convolutional = convolutional, activ = activation)
         # OLS trick!
-        LEFT OFF HERE
         parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
                                      , fe_var = fe_var, lam = lam, parapen = parapen
                                      , penalize_toplayer, nlayers = nlayers)
       }
       #update yhat for purpose of computing loss function
       yhat <- getYhat(parlist, hlay = hlayers)
-      mse <- mean((y-yhat)^2)
-      pl_for_lossfun <- parlist[!grepl('beta', names(parlist))]
-      if (!is.null(convolutional)){ # coerce the convolutional parameters to a couple of vectors to avoid double-counting in the loss
-        convolutional$convParms <- foreach(i = 1:convolutional$Nconv) %do% {
-          idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
-          rowMeans(foreach(j = idx, .combine = cbind) %do% {x <- pl_for_lossfun[[1]][,j]; x[x!=0][-1]})
+      mse <- mseold <- mean((y-yhat)^2)
+      if (length(nlayers)>1){
+        B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
+        lowerpar <- foreach(i = 1:length(nlayers), .combine = c) %do% {unlist(parlist[[i]][1:nlayers[i]])}
+        loss <- mse + lam * sum(c(parlist$beta_param*parapen,
+                                  B*as.numeric(penalize_toplayer),
+                                  lowerpar)^2)
+      } else {
+        pl_for_lossfun <- parlist[!grepl('beta', names(parlist))]
+        if (!is.null(convolutional)){
+          pl_for_lossfun[[1]] <- unlist(c(convolutional$convParms, convolutional$convBias))
         }
-        convolutional$convBias <- foreach(i = 1:convolutional$Nconv, .combine = c) %do% {
-          idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
-          mean(pl_for_lossfun[[1]][1,idx])
-        }
-        pl_for_lossfun[[1]] <- c(unlist(convolutional$convParms, convolutional$convBias))
+        loss <- mse + lam*sum(c(parlist$beta_param*parapen 
+                                , parlist$beta
+                                , unlist(sapply(pl_for_lossfun, as.numeric)))^2
+        )    
       }
-      loss <- mse + lam*sum(c(parlist$beta_param*parapen
-                              , parlist$beta
-                              , unlist(sapply(pl_for_lossfun, as.numeric)))^2
-      )
       oldloss <- lossvec[length(lossvec)]
       oldmse <- msevec[length(msevec)]
       lossvec <- append(lossvec, loss)
@@ -676,15 +688,32 @@ stop_early = list(check_every = 20,
           if (is.null(fe_var)){
             fe_output <- NULL
           } else {
-            Zdm <- demeanlist(as.matrix(hlayers[[length(hlayers)]]), list(fe_var))
-            Zdm <- Matrix(Zdm)
-            fe <- (y-ydm) - MatMult(as.matrix(hlayers[[length(hlayers)]]-Zdm), as.matrix(c(
-              parlist$beta_param, parlist$beta
-            )))
+            # compute FE output
+            if(length(nlayers)>2){
+              Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
+                hlay[[i]][[length(hlay[[i]])]]
+              }
+              Zdm <- demeanlist(as.matrix(Z), list(fe_var))
+              B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
+              fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(pl$beta_param, B)))
+            } else {
+              Zdm <- demeanlist(as.matrix(hlayers[[length(hlayers)]]), list(fe_var))
+              Zdm <- Matrix(Zdm)
+              fe <- (y-ydm) - MatMult(as.matrix(hlayers[[length(hlayers)]]-Zdm), as.matrix(c(
+                parlist$beta_param, parlist$beta
+              )))
+            }
             fe_output <- data.frame(fe_var, fe)
           }
-          pr_obj$parlist <- parlist
-          pr_obj$fe <- fe_output
+          pr_obj <- list(parlist = parlist,
+                         activation = activation,
+                         X = X,
+                         param = param,
+                         yhat = yhat,
+                         fe_var = unique(fe_var),
+                         fe = fe_output,
+                         convolutional = NULL,
+                         hidden_layers = hidden_units)
           pr_test <- predict.panelNNET(obj = pr_obj, 
                                        newX = stop_early$X_test, 
                                        fe.newX = stop_early$fe_test, 
@@ -708,7 +737,7 @@ stop_early = list(check_every = 20,
             }
           }
         }
-      } else { # if not doing early stopping, the best parlist is the one that attains the minimum
+      } else { # if not doing early stopping, the best parlist is the one that attains the minimum loss function
         # if achieving a new minimum, stash parlist in parlist_best
         if (loss == min(lossvec)){
           parlist_best <- parlist
@@ -770,53 +799,44 @@ stop_early = list(check_every = 20,
                             fe_var = fe_var, nlayers = nlayers,
                             convolutional = convolutional, activ = activation)
   }    
-  # #If trained with dropput, weight the layers by expectations
-  # if(dropout_hidden<1){
-  #   for (i in nlayers:1){
-  #     if (i == 1){
-  #       parlist[[i]] <- parlist[[i]] * dropout_input
-  #     } else {
-  #       parlist[[i]] <- parlist[[i]] * dropout_hidden
-  #     }
-  #   }
-  #   parlist$beta <- parlist$beta * dropout_hidden
-  #   if (OLStrick == TRUE){
-  #     parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
-  #       , fe_var = fe_var, lam = lam, parapen = parapen)
-  #   }
-  #   #redo the hidden layers based on the new parlist
-  #   hlayers <- calc_hlayers(parlist, X = X, param = param,
-  #                           fe_var = fe_var, nlayers = nlayers,
-  #                           convolutional = convolutional, activ = activation)
-  # }
   # final values...
   yhat <- getYhat(parlist, hlay = hlayers)
-  mse <- mean((y-yhat)^2)
-  pl_for_lossfun <- parlist[!grepl('beta', names(parlist))]
-  if (!is.null(convolutional)){ # coerce the convolutional parameters to a couple of vectors to avoid double-counting in the loss
-    convolutional$convParms <- foreach(i = 1:convolutional$Nconv) %do% {
-      idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
-      rowMeans(foreach(j = idx, .combine = cbind) %do% {x <- pl_for_lossfun[[1]][,j]; x[x!=0][-1]})
+  mse <- mseold <- mean((y-yhat)^2)
+  if (length(nlayers)>1){
+    B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
+    lowerpar <- foreach(i = 1:length(nlayers), .combine = c) %do% {unlist(parlist[[i]][1:nlayers[i]])}
+    loss <- mse + lam * sum(c(parlist$beta_param*parapen,
+                              B*as.numeric(penalize_toplayer),
+                              lowerpar)^2)
+  } else {
+    pl_for_lossfun <- parlist[!grepl('beta', names(parlist))]
+    if (!is.null(convolutional)){
+      pl_for_lossfun[[1]] <- unlist(c(convolutional$convParms, convolutional$convBias))
     }
-    convolutional$convBias <- foreach(i = 1:convolutional$Nconv, .combine = c) %do% {
-      idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
-      mean(pl_for_lossfun[[1]][1,idx])
-    }
-    pl_for_lossfun[[1]] <- c(unlist(convolutional$convParms, convolutional$convBias))
+    loss <- mse + lam*sum(c(parlist$beta_param*parapen 
+                            , parlist$beta
+                            , unlist(sapply(pl_for_lossfun, as.numeric)))^2
+    )    
   }
-  loss <- mse + lam*sum(c(parlist$beta_param*parapen
-                          , parlist$beta
-                          , unlist(sapply(pl_for_lossfun, as.numeric)))^2
-  )
   conv <- (iter < maxit)#Did we get convergence?
-  if(is.null(fe_var)){
+  if (is.null(fe_var)){
     fe_output <- NULL
   } else {
-    Zdm <- demeanlist(as.matrix(hlayers[[length(hlayers)]]), list(fe_var))
-    Zdm <- Matrix(Zdm)
-    fe <- (y-ydm) - as.matrix(hlayers[[length(hlayers)]]-Zdm) %*% as.matrix(c(
+    # compute FE output
+    if(length(nlayers)>2){
+      Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
+        hlay[[i]][[length(hlay[[i]])]]
+      }
+      Zdm <- demeanlist(as.matrix(Z), list(fe_var))
+      B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
+      fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(pl$beta_param, B)))
+    } else {
+      Zdm <- demeanlist(as.matrix(hlayers[[length(hlayers)]]), list(fe_var))
+      Zdm <- Matrix(Zdm)
+      fe <- (y-ydm) - MatMult(as.matrix(hlayers[[length(hlayers)]]-Zdm), as.matrix(c(
         parlist$beta_param, parlist$beta
-    ))
+      )))
+    }
     fe_output <- data.frame(fe_var, fe)
   }
   output <- list(yhat = yhat, parlist = parlist, hidden_layers = hlayers
@@ -825,7 +845,8 @@ stop_early = list(check_every = 20,
     , msevec = msevec, RMSprop = RMSprop, convtol = convtol
     , grads = grads, activation = activation, parapen = parapen
     , batchsize = batchsize, initialization = initialization, convolutional = convolutional
-    , dropout_hidden = dropout_hidden, dropout_input = dropout_input, mse_test = best_mse)
+    , dropout_hidden = dropout_hidden, dropout_input = dropout_input, mse_test = best_mse
+    , penalize_toplayer = penalize_toplayer)
   return(output) # list 
 }
 

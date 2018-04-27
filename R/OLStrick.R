@@ -15,51 +15,71 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
       }
     }
     constraint <- sum(const^2)
-    Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
-      hlay[[i]][[length(hlay[[i]])]]
+    Zdm <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
+      hidden_layers[[i]][[length(hidden_layers[[i]])]]
     }
-    LEFT OFF HERE
-    
-  } else {
+    Zdm <- cbind(hidden_layers$param, Zdm)
+    if (!is.null(fe_var)){
+      Zdm <- demeanlist(Zdm, list(fe_var))
+      targ <- demeanlist(y, list(fe_var))      
+    }  else {
+      targ <- y
+    }   
+  } else { #regular/non-multinet
     constraint <- sum(c(parlist$beta_param*parapen, parlist$beta)^2)    
-  }
-
-  #getting implicit regressors depending on whether regression is panel
-  
-
-  if (!is.null(fe_var)){
-    Zdm <- demeanlist(as.matrix(hidden_layers[[length(hidden_layers)]]), list(fe_var))
-    targ <- demeanlist(y, list(fe_var))
-  } else {
-    Zdm <- hidden_layers[[length(hidden_layers)]]
-    targ <- y
+    if (!is.null(fe_var)){
+      Zdm <- demeanlist(as.matrix(hidden_layers[[length(hidden_layers)]]), list(fe_var))
+      targ <- demeanlist(y, list(fe_var))
+    } else {
+      Zdm <- hidden_layers[[length(hidden_layers)]]
+      targ <- y
+    }
   }
   #set up the penalty vector
   D <- rep(1, ncol(Zdm))
   D[1:length(parapen)] <- D[1:length(parapen)]*parapen #incorporate parapen into diagonal of covmat
+  if (penalize_toplayer == FALSE){
+    D <- D*0
+  }
+  if (is.null(fe_var)){
+    D[1] <- 0
+  }
   # find implicit lambda
-  b <- c(parlist$beta_param, parlist$beta)
+  b <- c(unlist(parlist)[grepl("beta", names(unlist(parlist)))])
+  b <- c(b[grepl("param", names(b))], b[!grepl("param", names(b))])
+  # b <- c(parlist$beta_param, parlist$beta)
   Zty <- MatMult(t(Zdm), targ)
   ZtZ <- MatMult(t(Zdm), Zdm)
-#   newlam <-   1/constraint * MatMult(t(b), (Zty - MatMult(ZtZ,b)))
-# # if (newlam<lam){stop("newlam")}
-#   newlam1 <- max(lam, newlam) #dealing with the case where you're not constrained
-  f <- function(lam){
-    bi <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(lam)), Zty)), error = function(e){b})
-    (crossprod(bi*D) - constraint)^2
+  if (constraint >0){
+    f <- function(lam){
+      bi <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(lam)), Zty)), error = function(e){b})
+      (crossprod(bi*D) - constraint)^2
+    }
+    o <- optim(par = lam, f = f, method = 'Brent', lower = lam, upper = 1e9)
+    newlam2 <- o$par
+    #New top-level params
+    b <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(newlam2)), Zty)),
+                  error = function(e){b})
+  } else {
+    b <- tryCatch(as.numeric(MatMult(solve(ZtZ), Zty)),
+                  error = function(e){b})
   }
-  o <- optim(par = lam, f = f, method = 'Brent', lower = lam, upper = 1e9)
-  newlam2 <- o$par
-  #New top-level params
-  b <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(newlam2)), Zty)),
-                error = function(e){b})
   if (inherits(b, "error")){
     print("singularity in OLStrick!")
     return(parlist)
     # b <- as.numeric(MatMult(ginv(ZtZ + diag(D)*as.numeric(newlam)), Zty))
-  }
+  }    
   parlist$beta_param <- b[1:length(parlist$beta_param)]
-  parlist$beta <- b[(length(parlist$beta_param)+1):length(b)]
+  if (names(parlist)[[1]] == "p1"){
+    leftoff <- length(parlist$beta_param)
+    for (i in 1:(length(parlist)-1)){
+      idx <- (leftoff+1):(leftoff+length(parlist[[i]]$beta))
+      parlist[[i]]$beta <- b[idx]
+      leftoff <- max(idx)
+    }
+  } else {
+    parlist$beta <- b[(length(parlist$beta_param)+1):length(b)]    
+  }
   return(parlist)
 }
 
