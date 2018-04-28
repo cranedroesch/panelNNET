@@ -1,95 +1,90 @@
-panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param,
-                          parapen, penalize_toplayer, parlist, verbose,
-                          report_interval, gravity, convtol, RMSprop, start.LR,
-                          activation, batchsize, maxstopcounter, OLStrick, OLStrick_interval,
-                          initialization, dropout_hidden, dropout_input, convolutional,
-                          LR_slowing_rate, return_best, stop_early, ...){
+# panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param,
+#                           parapen, penalize_toplayer, parlist, verbose,
+#                           report_interval, gravity, convtol, RMSprop, start.LR,
+#                           activation, batchsize, maxstopcounter, OLStrick, OLStrick_interval,
+#                           initialization, dropout_hidden, dropout_input, convolutional,
+#                           LR_slowing_rate, return_best, stop_early, ...){
 
-# rm(list=ls())
-# gc()
-# gc()
-# "%ni%" <- Negate("%in%")
-# mse <- function(x, y){mean((x-y)^2)}
-# 
-# library(devtools)
-# # install_github("cranedroesch/panelNNET", ref = "earlystop", force = F)
-# library(panelNNET)
-# library(doParallel)
-# library(doBy)
-# library(glmnet)
-# library(dplyr)
-# library(randomForest)
-# library(splines)
-# 
-# AWS <- grepl('ubuntu', getwd())
-# desktop <- grepl(':', getwd())
-# laptop <- grepl('/home/andrew', getwd())
-# if(AWS){
-#   setwd("/home/ubuntu/projdir")
-#   outdir <- "/home/ubuntu/projdir/outdir"
-#   registerDoParallel(detectCores())
-# }
-# if(desktop){
-# }
-# if(laptop){
-#   setwd("/home/andrew/Dropbox/USDA/ARC/data")
-#   outdir <- "/home/andrew/Dropbox/USDA/ARC/output"
-#   registerDoParallel(detectCores())
-# }
-# dat <- readRDS("panel_corn.Rds")
-# dat <- subset(dat, state %in% c("17", "19"))
-# X1 <- dat[,paste0("maxat_jday_", 200:215)]
-# X2 <- dat[,paste0("precip_jday_", 200:215)]
-# dat$y <- dat$year - min(dat$year) + 1
-# dat$y2 <- dat$y^2
-# Xp <- dat[,c("y", "y2")]
-# Xp <- Xp[sapply(Xp, sd) > 0]
-# 
-# is <- dat$year%%2==1
-# oos <- is == F
-# y = dat$yield[is]
-# X = list(X1[is,], X2[is,])
-# hidden_units = list(c(10, 2), c(8, 4))
-# fe_var = dat$fips[is]
-# maxit = 1000
-# lam = .001
-# time_var = dat$year[is]
-# param = Xp[is,]
-# verbose = T
-# report_interval = 1
-# gravity = 1.01
-# convtol = 1e-3
-# activation = 'lrelu'
-# start.LR = .01
-# parlist = NULL
-# OLStrick = TRUE
-# OLStrick_interval = 25
-# batchsize = 256
-# maxstopcounter = 25
-# LR_slowing_rate = 2
-# parapen = c(0,0)
-# penalize_toplayer = FALSE
-# return_best = TRUE
-# 
-# RMSprop = T
-# batchsize = 48
-# initialization = "HZRS"
-# dropout_hidden <- dropout_input <- 1
-# convolutional <- NULL
-# 
+rm(list=ls())
+gc()
+gc()
+"%ni%" <- Negate("%in%")
+mse <- function(x, y){mean((x-y)^2)}
+
+library(devtools)
+install_github("cranedroesch/panelNNET", ref = "multinet", force = F)
+library(panelNNET)
+library(doParallel)
+library(doBy)
+library(glmnet)
+library(dplyr)
+library(randomForest)
+library(splines)
+
+AWS <- grepl('ubuntu', getwd())
+desktop <- grepl(':', getwd())
+laptop <- grepl('/home/andrew', getwd())
+if(AWS){
+  setwd("/home/ubuntu/projdir")
+  outdir <- "/home/ubuntu/projdir/outdir"
+  registerDoParallel(detectCores())
+}
+if(desktop){
+}
+if(laptop){
+  setwd("/home/andrew/Dropbox/USDA/ARC/data")
+  outdir <- "/home/andrew/Dropbox/USDA/ARC/output"
+  registerDoParallel(detectCores())
+}
+dat <- readRDS("panel_corn.Rds")
+dat <- subset(dat, state %in% c("17", "19"))
+X1 <- dat[,paste0("maxat_jday_", 200:215)]
+X2 <- dat[,paste0("precip_jday_", 200:215)]
+dat$y <- dat$year - min(dat$year) + 1
+dat$y2 <- dat$y^2
+Xp <- dat[,c("y", "y2")]
+Xp <- Xp[sapply(Xp, sd) > 0]
+
+is <- dat$year%%2==1
+oos <- is == F
+y = dat$yield[is]
+X = list(X1[is,], X2[is,])
+hidden_units = list(c(10, 2), c(8, 4))
+fe_var = dat$fips[is]
+maxit = 10000
+lam = 0
+time_var = dat$year[is]
+param = Xp[is,]
+verbose = T
+report_interval = 1
+gravity = 1.01
+convtol = 1e-3
+activation = 'lrelu'
+start.LR = .00001
+parlist = NULL
+OLStrick = T
+OLStrick_interval = 25
+batchsize = 256
+maxstopcounter = 2500
+LR_slowing_rate = 2
+parapen = c(0,0)
+penalize_toplayer = FALSE
+return_best = TRUE
+
+RMSprop = T
+batchsize = 48
+initialization = "HZRS"
+dropout_hidden <- dropout_input <- 1
+convolutional <- NULL
+
 # stop_early = list(check_every = 20,
 #                   max_ES_stopcounter = 5,
 #                   y_test = dat$yield[oos],
 #                   X_test = list(X1[oos,], X2[oos,]),
 #                   P_test = as.matrix(Xp[oos,]),
 #                   fe_test = dat$fips[oos])
+stop_early <- NULL
 
-# panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param, 
-#                           parapen, penalize_toplayer, parlist, verbose, 
-#                           report_interval, gravity, convtol, RMSprop, start.LR, 
-#                           activation, batchsize, maxstopcounter, OLStrick, OLStrick_interval, 
-#                           initialization, dropout_hidden, dropout_input, convolutional, 
-#                           LR_slowing_rate, return_best, stop_early, ...){
 
   ##########
   #Define internal functions
@@ -113,12 +108,13 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
         Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
           hlay[[i]][[length(hlay[[i]])]]
         }
-        Zdm <- demeanlist(as.matrix(Z), list(fe_var))
+        Z <- cbind(param, as.matrix(Z))
+        Zdm <- demeanlist(Z, list(fe_var))
         B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
         fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(pl$beta_param, B)))
         yhat <- MatMult(Z, c(pl$beta_param, B)) + fe    
       } else {
-        yhat <- MatMult(hlay[[length(hlay)]], c(pl$beta_param, pl$beta))
+        stop("not implement for no FE's")
       }            
     } else {
       if (!is.null(fe_var)){
@@ -137,6 +133,9 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # hlay <- hlayers
 # curBat <- NULL
 # droplist <- dropinp <- NULL
+# hlay = hlay
+# yhat = yhat[curBat]
+# curBat = curBat
     #subset the parameters and hidden layers based on the droplist
     if (!is.null(droplist)){
       Xd <- X[,dropinp, drop = FALSE]
@@ -188,7 +187,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
         return(grads)
       }
       # add on parametric gradients
-      grads[[length(grads)+1]] <- MatMult(t(hlayers$param), getDelta(CB(as.matrix(y)), yhat)) 
+      grads[[length(grads)+1]] <- MatMult(t(CB(hlay$param)), getDelta(CB(as.matrix(y)), yhat)) 
     } else {
       grads <- grad_stubs <- vector('list', NL + 1)
       grad_stubs[[length(grad_stubs)]] <- getDelta(CB(as.matrix(y)), yhat)
@@ -411,6 +410,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     #add the bias term/intercept onto the front, if there are no FE's
     parlist$beta_param <- c(runif(is.null(fe_var), -ubounds, ubounds), parlist$beta_param)
   }
+  parlist <- as.relistable(parlist)
   #if there are no FE's, append a 0 to the front of the parapen vec, to leave the intercept unpenalized
   if(is.null(fe_var) & !is.null(param)){
     parapen <- c(0, parapen)
@@ -436,13 +436,13 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       fe_output = NULL; 
     } else {
       # compute FE output
-      if(length(nlayers)>2){
+      if(length(nlayers)>1){
         Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
-          hlay[[i]][[length(hlay[[i]])]]
+          hlayers[[i]][[length(hlayers[[i]])]]
         }
         Zdm <- demeanlist(as.matrix(Z), list(fe_var))
         B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
-        fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(pl$beta_param, B)))
+        fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(parlist$beta_param, B)))
       } else {
         Zdm <- demeanlist(as.matrix(hlayers[[length(hlayers)]]), list(fe_var))
         Zdm <- Matrix(Zdm)
@@ -513,19 +513,18 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   lossvec <- append(lossvec, loss)
   msevec <- append(msevec, mse)
   parlist_best <- parlist
-  
-  # start with an OLStrick, before calculating the gradients
-  if (OLStrick == TRUE & (iter %% OLStrick_interval == 0 | iter == 0)){ # do OLStrick on first iteration
-    # Update hidden layers
-    hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var,
-                            nlayers = nlayers, convolutional = convolutional, activ = activation)
-    # OLS trick!
-    parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
-                                 , fe_var = fe_var, lam = lam, parapen = parapen
-                                 , penalize_toplayer, nlayers = nlayers)
-  }
-  
-  
+  # 
+  # # start with an OLStrick, before calculating the gradients
+  # if (OLStrick == TRUE & (iter %% OLStrick_interval == 0 | iter == 0)){ # do OLStrick on first iteration
+  #   # Update hidden layers
+  #   hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var,
+  #                           nlayers = nlayers, convolutional = convolutional, activ = activation)
+  #   
+  #   # OLS trick!
+  #   parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
+  #                                , fe_var = fe_var, lam = lam, parapen = parapen
+  #                                , penalize_toplayer, nlayers = nlayers)
+  # }
   ###############
   #start iterating
   while(iter < maxit & stopcounter < maxstopcounter){
