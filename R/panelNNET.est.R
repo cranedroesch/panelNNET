@@ -77,13 +77,13 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # dropout_hidden <- .5
 # dropout_input <- .8
 # convolutional <- NULL
-# 
-# # stop_early = list(check_every = 20,
-# #                   max_ES_stopcounter = 5,
-# #                   y_test = dat$yield[oos],
-# #                   X_test = list(X1[oos,], X2[oos,]),
-# #                   P_test = as.matrix(Xp[oos,]),
-# #                   fe_test = dat$fips[oos])
+
+# stop_early = list(check_every = 20,
+#                   max_ES_stopcounter = 5,
+#                   y_test = dat$yield[oos],
+#                   X_test = list(X1[oos,], X2[oos,]),
+#                   P_test = as.matrix(Xp[oos,]),
+#                   fe_test = dat$fips[oos])
 # stop_early <- NULL
 
 
@@ -93,174 +93,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   recursive_add <- function(x, y) tryCatch(x + y, error = function(e) Map(recursive_add, x, y))
   recursive_mult <- function(x, y) tryCatch(x * y, error = function(e) Map(recursive_mult, x, y))
   recursive_RMSprop <- function(x, y) tryCatch(LR/sqrt(x+1e-10) * y, error = function(e) Map(recursive_RMSprop, x, y))
-  
-  getYhat <- function(pl, hlay = NULL){ 
-    #Update hidden layers
-    if (is.null(hlay)){hlay <- calc_hlayers(pl,
-                                            X = X,
-                                            param = param,
-                                            fe_var = fe_var,
-                                            nlayers = nlayers,
-                                            convolutional = convolutional,
-                                            activ = activation)}
-    #update yhat
-    if (length(nlayers)>1){
-      if (!is.null(fe_var)){
-        Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
-          hlay[[i]][[length(hlay[[i]])]]
-        }
-        Z <- cbind(param, as.matrix(Z))
-        Zdm <- demeanlist(Z, list(fe_var))
-        B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
-        fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(pl$beta_param, B)))
-        yhat <- MatMult(Z, c(pl$beta_param, B)) + fe    
-      } else {
-        stop("not implement for no FE's")
-      }            
-    } else {
-      if (!is.null(fe_var)){
-        Zdm <- demeanlist(as.matrix(hlay[[length(hlay)]]), list(fe_var))
-        fe <- (y-ydm) - MatMult(as.matrix(hlay[[length(hlay)]])-Zdm, as.matrix(c(pl$beta_param, pl$beta)))
-        yhat <- MatMult(hlay[[length(hlay)]], c(pl$beta_param, pl$beta)) + fe    
-      } else {
-        yhat <- MatMult(hlay[[length(hlay)]], c(pl$beta_param, pl$beta))
-      }      
-    }
-    return(as.numeric(yhat))
-  }
 
-  calc_grads<- function(plist, hlay = NULL, yhat = NULL, curBat = NULL, droplist = NULL, dropinp = NULL){
-# plist <- parlist
-# hlay <- hlayers
-# curBat <- NULL
-# droplist <- dropinp <- NULL
-# hlay = hlay
-# yhat = yhat[curBat]
-# curBat = curBat
-    #subset the parameters and hidden layers based on the droplist
-    if (!is.null(droplist)){
-      Xd <- X[,dropinp, drop = FALSE]
-      if (nlayers > 1){
-        #drop from parameter list emanating from input
-        plist[[1]] <- plist[[1]][c(TRUE,dropinp),droplist[[1]]]
-        # drop from subsequent parameter matrices
-        if (nlayers>2){
-          for (i in 2:(nlayers-1)){
-            plist[[i]] <- plist[[i]][c(TRUE, droplist[[i-1]]), droplist[[i]], drop = FALSE]
-          }
-        }
-        plist[[nlayers]] <- plist[[nlayers]][c(TRUE, droplist[[nlayers-1]]), 
-                                             droplist[[nlayers]][(length(parlist$beta_param)+1):length(droplist[[nlayers]])], 
-                                             drop = FALSE]
-      } else { #for one-layer networks
-        #drop from parameter list emanating from input
-        plist[[1]] <- plist[[1]][c(TRUE,dropinp),
-                                 droplist[[nlayers]][(length(parlist$beta_param)+1):length(droplist[[nlayers]])], 
-                                 drop = FALSE]
-      }
-      # manage parametric/nonparametric distinction in the top layer
-      plist$beta <- plist$beta[droplist[[nlayers]][(length(parlist$beta_param)+1):length(droplist[[nlayers]])]]
-    } else {Xd <- X}#for use below...  X should be safe given scope, but extra assignment is cheap here
-    if (!is.null(curBat)){CB <- function(x){x[curBat,,drop = FALSE]}} else {CB <- function(x){x}}
-    if (is.null(yhat)){yhat <- getYhat(plist, hlay = hlay)}
-    NL <- nlayers + as.numeric(!is.null(convolutional))
-    if (length(NL)>1){
-      grads <- foreach(p = 1:length(NL)) %do% {
-        grads <- grad_stubs <- vector('list', NL[p] + 1)
-        grad_stubs[[length(grad_stubs)]] <- getDelta(CB(as.matrix(y)), yhat)
-        for (i in NL[p]:1){
-          # print(i)
-          if (i == NL[p]){outer_param = as.matrix(c(plist[[p]]$beta))} else {outer_param = plist[[p]][[i+1]]}
-          if (i == 1){lay = CB(Xd[[p]])} else {lay= CB(hlay[[p]][[i-1]])}
-          #add the bias
-          lay <- cbind(1, lay) #add bias to the hidden layer
-          if (i != NL[p]){outer_param <- outer_param[-1,, drop = FALSE]}      #remove parameter on upper-layer bias term
-          grad_stubs[[i]] <- activ_prime(MatMult(lay, plist[[p]][[i]])) * MatMult(grad_stubs[[i+1]], Matrix::t(outer_param))
-        }
-        grad_stubs <- lapply(grad_stubs, as.matrix)
-        for (i in 1:length(grad_stubs)){
-          if (i == 1){lay = as.matrix(CB(Xd[[p]]))} else {lay= CB(hlay[[p]][[i-1]])}
-          if (i != length(grad_stubs)){# don't add bias term to top layer when there are fixed effects present
-            lay <- cbind(1, lay) #add bias to the hidden layer
-          }
-          grads[[i]] <- eigenMapMatMult(t(lay), as.matrix(grad_stubs[[i]]))
-        }
-        return(grads)
-      }
-      # add on parametric gradients
-      grads[[length(grads)+1]] <- MatMult(t(CB(hlay$param)), getDelta(CB(as.matrix(y)), yhat)) 
-    } else {
-      grads <- grad_stubs <- vector('list', NL + 1)
-      grad_stubs[[length(grad_stubs)]] <- getDelta(CB(as.matrix(y)), yhat)
-      for (i in NL:1){
-        # print(i)
-        if (i == NL){outer_param = as.matrix(c(plist$beta))} else {outer_param = plist[[i+1]]}
-        if (i == 1){lay = CB(Xd)} else {lay= CB(hlay[[i-1]])}
-        #add the bias
-        lay <- cbind(1, lay) #add bias to the hidden layer
-        if (i != NL){outer_param <- outer_param[-1,, drop = FALSE]}      #remove parameter on upper-layer bias term
-        grad_stubs[[i]] <- activ_prime(MatMult(lay, plist[[i]])) * MatMult(grad_stubs[[i+1]], Matrix::t(outer_param))
-      }
-      # multiply the gradient stubs by their respective layers to get the actual gradients
-      # first coerce them to regular matrix classes so that the C code for matrix multiplication can speed things up
-      grad_stubs <- lapply(grad_stubs, as.matrix)
-      hlay <- lapply(hlay, as.matrix)
-      for (i in 1:length(grad_stubs)){
-        if (i == 1){lay = as.matrix(CB(Xd))} else {lay= CB(hlay[[i-1]])}
-        if (i != length(grad_stubs)){# don't add bias term to top layer when there are fixed effects present
-          lay <- cbind(1, lay) #add bias to the hidden layer
-        }
-        grads[[i]] <- eigenMapMatMult(t(lay), as.matrix(grad_stubs[[i]]))
-      } 
-    }
-    # if using dropout, reconstitute full gradient
-    if (!is.null(droplist)){
-      emptygrads <- lapply(parlist, function(x){x*0})
-      # bottom weights
-      if (nlayers > 1){
-        emptygrads[[1]][c(TRUE,dropinp),droplist[[1]]] <- grads[[1]]
-        if (nlayers>2){
-          for (i in 2:(nlayers-1)){
-            emptygrads[[i]][c(TRUE, droplist[[i-1]]), droplist[[i]]] <- grads[[i]]
-          }
-        }
-        emptygrads[[nlayers]][c(TRUE, droplist[[nlayers-1]]), 
-                               droplist[[nlayers]][(length(parlist$beta_param)+1):length(droplist[[nlayers]])]] <- grads[[nlayers]]
-      } else { #for one-layer networks
-        emptygrads[[1]][c(TRUE,dropinp),
-                        droplist[[1]][(length(parlist$beta_param)+1):length(droplist[[1]])]] <- grads[[1]]
-      }
-      #top-level
-      emptygrads$beta <- emptygrads$beta_param <- NULL
-      emptygrads[[nlayers + 1]] <- matrix(rep(0, length(parlist$beta)+length(parlist$beta_param))) #empty
-      emptygrads[[nlayers + 1]][droplist[[nlayers]]] <- grads[[nlayers + 1]]
-      # all done
-      grads <- emptygrads
-    }
-    #process the gradients for the convolutional layers
-    if (!is.null(convolutional)){
-      if (!is.null(droplist)){
-        warning("dropout not yet made to work with conv nets")
-      }
-      #mask out the areas not in use
-      gg <- grads[[1]] * convMask
-      #gradients for conv layer.  pooling via rowMeans
-      grads_convParms <- foreach(i = 1:convolutional$Nconv) %do% {
-        idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
-        rowMeans(foreach(j = idx, .combine = cbind) %do% {x <- gg[,j]; x[1] <- -999; x[x!=0][-1]})
-      }
-      grads_convBias <- foreach(i = 1:convolutional$Nconv, .combine = c) %do% {
-        idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
-        mean(gg[1,idx])
-      }
-      # make the layer
-      convGrad <- makeConvLayer(grads_convParms, grads_convBias)
-      #set the gradients on the time-invariant terms to zero
-      convGrad[,(N_TV_layers * convolutional$Nconv+1):ncol(convGrad)] <- 0
-      grads[[1]] <- convGrad
-    }
-    return(grads)
-  }
 
   makeConvLayer <- function(convParms, convBias){
     # time-varying portion
@@ -423,14 +256,14 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   hlayers <- calc_hlayers(parlist, X = X, param = param, 
                           fe_var = fe_var, nlayers = nlayers, 
                           convolutional = convolutional, activation = activation)
-  #calculate ydm and put it in global...
+  #calculate ydm and put it in global... ...one year later, I forget why this needs to be in global
   if (!is.null(fe_var)){
     ydm <<- demeanlist(y, list(fe_var)) 
   }
   #####################################
   #start setup
   #get starting mse
-  yhat <- as.numeric(getYhat(parlist, hlay = hlayers))
+  yhat <- as.numeric(getYhat(parlist, hlayers, param, y, ydm, fe_var, nlayers))
   # if using early stopping, initialize object for passing to predict function
   if (!is.null(stop_early)){
     if (is.null(fe_var)){
@@ -488,25 +321,11 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   }
   LRvec <- LR <- start.LR# starting step size
   #Calculate gradients
-  grads <- calc_grads(parlist, hlayers, yhat, droplist = NULL, dropinp = NULL)
+  grads <- calc_grads(parlist, hlayers, X, y, yhat, droplist = NULL, nlayers)
   #Initialize updates
-  if (length(nlayers)>1){
-    updates <- foreach(i = 1:length(nlayers))%do% {
-      lapply(parlist[[i]], function(x){x*0})
-    }
-    updates$beta_param <- parlist$beta_param*0
-  } else {
-    updates <- lapply(parlist, function(x){x*0})
-  }
+  updates <- relist(unlist(parlist)*0)
   #initialize G2 term for RMSprop
-  if (RMSprop == TRUE){
-    #Prior gradients are zero at first iteration...
-    G2 <- updates
-    # #squashing all of the numeric list elements into a matrix/vector
-    # betas <- matrix(unlist(G2[grepl('beta', names(G2))]))
-    # G2 <- G2[!grepl('beta', names(G2))]
-    # G2[[length(G2)+1]] <- betas
-  } else {G2 <- NULL}
+  if (RMSprop == TRUE){G2 <- updates} else {G2 <- NULL}
   # initialize terms used in the while loop
   D <- 1e6
   ES_stopcounter <- stopcounter <- iter <- 0
@@ -514,22 +333,9 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   lossvec <- append(lossvec, loss)
   msevec <- append(msevec, mse)
   parlist_best <- parlist
-  # 
-  # # start with an OLStrick, before calculating the gradients
-  # if (OLStrick == TRUE & (iter %% OLStrick_interval == 0 | iter == 0)){ # do OLStrick on first iteration
-  #   # Update hidden layers
-  #   hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var,
-  #                           nlayers = nlayers, convolutional = convolutional, activ = activation)
-  #   
-  #   # OLS trick!
-  #   parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
-  #                                , fe_var = fe_var, lam = lam, parapen = parapen
-  #                                , penalize_toplayer, nlayers = nlayers)
-  # }
   ###############
   #start iterating
   while(iter < maxit & stopcounter < maxstopcounter){
-    #Start epoch
     #Assign batches
     batchid <- sample(1:length(y) %/% batchsize +1)
     if (min(table(batchid))<(batchsize/2)){#Deal with orphan batches
@@ -538,14 +344,30 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     for (bat in 1:max(batchid)) { # run minibatch
       iter <- iter + 1
       curBat <- which(batchid == bat)
-      hlbatch <- calc_hlayers(parlist, X = lapply(X, function(X){X[curBat,]}), 
+      # Create droplist.  
+      droplist <- gen_droplist(dropout_hidden, dropout_input, nlayers, hlayers, X)
+      #Drop parameters.  
+      plist <- drop_parlist(parlist, droplist, nlayers)
+      #Compute hidden layers based on parameters
+      if (is.null(droplist)){
+        Xd <- lapply(X, function(X){X[curBat,]})
+      } else {
+        Xd <- foreach(i = 1:length(X)) %do% {
+          X[[i]][curBat,droplist[[i]][[1]]]
+        }
+      }
+      hlbatch <- calc_hlayers(plist, X = Xd,
                               param = param[curBat,], fe_var = fe_var[curBat], 
                               nlayers = nlayers, convolutional = convolutional, activ = activation)
       # update hidden layers
       if (length(nlayers)>1){
         for (p in 1:length(nlayers)){
           for (h in 1:nlayers[p]){
-            hlayers[[p]][[h]][curBat,] <- hlbatch[[p]][[h]]
+            if (is.null(droplist)){
+              hlayers[[p]][[h]][curBat,] <- hlbatch[[p]][[h]]
+            } else {
+              hlayers[[p]][[h]][curBat,droplist[[p]][[h+1]]] <- hlbatch[[p]][[h]]
+            }
           }                  
         }
       } else {
@@ -553,50 +375,21 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
           hlayers[[h]][curBat,] <- hlbatch[[h]]
         }        
       }
-      yhat <- getYhat(parlist, hlay = hlayers) # update yhat for purpose of computing gradients
-      hlay <- hlayers# hlay may have experienced dropout, as distinct from hlayers
-      # if using dropout, generate a droplist
-      if (dropout_hidden < 1){
-        droplist <- lapply(hlayers, function(x){
-          todrop <- as.logical(rbinom(ncol(x), 1, dropout_hidden))
-          if (all(todrop==FALSE)){#ensure that at least one unit is present
-            todrop[sample(1:length(todrop))] <- TRUE
-          }
-          return(todrop)
-        })
-        # remove the parametric terms from dropout contention
-        droplist[[nlayers]][1:length(parlist$beta_param)] <- TRUE
-        # dropout from the input layer
-        todrop <- rbinom(ncol(X), 1, dropout_input)
-        if (all(todrop==FALSE)){# ensure that at least one unit is present
-          todrop[sample(1:length(todrop))] <- TRUE
-        }
-        dropinp <- as.logical(todrop)
-        for (i in 1:nlayers){
-          hlay[[i]] <- hlay[[i]][,droplist[[i]], drop = FALSE]
-        }
-        Xd <- X[,dropinp]
-      } else {Xd <- X; droplist = NULL}
+      #Getyhat from that
+      yhat <- getYhat(plist, hlay = hlbatch, param[curBat,], y[curBat], ydm[curBat], fe_var[curBat], nlayers) # update yhat for purpose of computing gradients
       # before updating gradients, compute square of gradients for RMSprop
       if (RMSprop ==  TRUE){
         oldG2 <- rapply(grads, function(x){.9*x^2}, how = "list")
       } 
-      # Get updated gradients
-      grads <- calc_grads(plist = parlist, hlay = hlay
-        , yhat = yhat[curBat], curBat = curBat, droplist = droplist, dropinp = dropinp)
+      # Calculate gradients for minibatch
+      grads_p <- calc_grads(plist = plist, hlay = hlbatch, Xd = Xd, y = y[curBat]
+        , yhat = yhat, droplist = droplist, nlayers = nlayers)
+      grads <- reconstitute(grads_p, droplist, parlist, nlayers)
       # Calculate updates to parameters based on gradients and learning rates
       if (RMSprop == TRUE){
         newG2 <- rapply(grads, function(x){.1*x^2}, how = "list")
         G2 <- recursive_add(newG2, oldG2)
-        # G2 <- mapply('+', newG2, oldG2)
         updates <- recursive_RMSprop(G2, grads)
-        # uB <- LR/sqrt(G2[[length(G2)]]+1e-10) * grads[[length(grads)]]
-        # updates$beta_param <- uB[1:length(parlist$beta_param)]
-        # updates$beta <- uB[ifelse(is.null(param), 0, ncol(param))+(1:length(parlist$beta))]
-        # # updates to lower layers
-        # NL <- nlayers + as.numeric(!is.null(convolutional))
-        # for(i in NL:1){
-        #   updates[[i]] <- LR/sqrt(G2[[i]]+1e-10) * grads[[i]]
         # }
       } else { #if RMSprop == FALSE
         updates <- rapply(grads, function(x){LR*x}, how = "list")
@@ -633,6 +426,11 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                                      , penalize_toplayer, nlayers = nlayers)
       }
       #update yhat for purpose of computing loss function
+      
+      ##############
+    #   left off here
+      ################
+      
       yhat <- getYhat(parlist, hlay = hlayers)
       mse <- mseold <- mean((y-yhat)^2)
       if (length(nlayers)>1){
