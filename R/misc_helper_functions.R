@@ -17,3 +17,7 @@ MatMult <- function(A, B){
     A %*% B
   }
 }
+
+recursive_add <- function(x, y) tryCatch(x + y, error = function(e) Map(recursive_add, x, y))
+recursive_subtract <- function(x, y) tryCatch(x - y, error = function(e) Map(recursive_subtract, x, y))
+recursive_mult <- function(x, y) tryCatch(x * y, error = function(e) Map(recursive_mult, x, y))

@@ -91,10 +91,6 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 
   ##########
   #Define internal functions
-
-  recursive_add <- function(x, y) tryCatch(x + y, error = function(e) Map(recursive_add, x, y))
-  recursive_subtract <- function(x, y) tryCatch(x - y, error = function(e) Map(recursive_subtract, x, y))
-  recursive_mult <- function(x, y) tryCatch(x * y, error = function(e) Map(recursive_mult, x, y))
   recursive_RMSprop <- function(x, y) tryCatch(LR/sqrt(x+1e-10) * y, error = function(e) Map(recursive_RMSprop, x, y))
 
   makeConvLayer <- function(convParms, convBias){
