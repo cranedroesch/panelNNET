@@ -56,6 +56,7 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
                      FUN = '/')
         } else {P <- NULL}
         # compute hidden layers
+        nlayers <- sapply(obj$hidden_layers, length)
         HL <- calc_hlayers(parlist = obj$parlist, 
                            X = D, 
                            param = P, 
