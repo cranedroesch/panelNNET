@@ -71,7 +71,7 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
         B <- foreach(i = 1:length(nlayers), .combine = c) %do% {obj$parlist[[i]]$beta}
         ydm_test <- demeanlist(y_test[fe.newX %ni% obj$fe$fe_var], list(fe.newX[fe.newX %ni% obj$fe$fe_var]))
         fe <- (y_test[fe.newX %ni% obj$fe$fe_var]-ydm_test) - 
-          MatMult(as.matrix(Z)-Zdm, as.matrix(c(parlist$beta_param, B)))
+          MatMult(as.matrix(Z)-Zdm, as.matrix(c(obj$parlist$beta_param, B)))
         FEs_to_append <- summaryBy(fe~fe_var, keep.names = T,
                                    data = data.frame(fe = fe, fe_var = fe.newX[fe.newX %ni% obj$fe$fe_var]))
         FEs_to_merge <- rbind(FEs_to_merge, FEs_to_append)
