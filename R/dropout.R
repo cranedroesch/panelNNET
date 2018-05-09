@@ -84,7 +84,7 @@ reconstitute <- function(dropped, droplist, full, nlayers){
     if (!is.null(full$beta_param)){
       BP <- full$beta_param      
     }
-    emptygrads <- relist(unlist(full)*0)
+    emptygrads <- recursive_mult(full, 0)
     for (j in 1:length(nlayers)){
       if (nlayers[[j]] > 1){
         emptygrads[[j]][[1]][c(TRUE,droplist[[j]][[1]]),droplist[[j]][[2]]] <- dropped[[j]][[1]]

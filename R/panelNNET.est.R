@@ -36,8 +36,10 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 #   outdir <- "/home/andrew/Dropbox/USDA/ARC/output"
 #   registerDoParallel(detectCores())
 # }
-# dat <- readRDS("panel_corn.Rds")
-# dat <- subset(dat, state %in% c("17", "19"))
+# # dat <- readRDS("panel_corn.Rds")
+# # dat <- subset(dat, state %in% c("17", "19"))
+# # saveRDS(dat, "testdat.Rds")
+# dat <- readRDS("testdat.Rds")
 # X1 <- dat[,paste0("maxat_jday_", 200:215)]
 # X2 <- dat[,paste0("precip_jday_", 200:215)]
 # dat$y <- dat$year - min(dat$year) + 1
@@ -62,7 +64,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # activation = 'lrelu'
 # start.LR = .00001
 # parlist = NULL
-# OLStrick = T
+# OLStrick = F
 # OLStrick_interval = 25
 # batchsize = 256
 # maxstopcounter = 2500
@@ -74,12 +76,12 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # RMSprop = T
 # batchsize = 48
 # initialization = "HZRS"
-# dropout_hidden <- .5
-# dropout_input <- .8
+# dropout_hidden <- 1
+# dropout_input <- 1
 # convolutional <- NULL
-
+# 
 # stop_early = list(check_every = 20,
-#                   max_ES_stopcounter = 5,
+#                   max_ES_stopcounter = 50,
 #                   y_test = dat$yield[oos],
 #                   X_test = list(X1[oos,], X2[oos,]),
 #                   P_test = as.matrix(Xp[oos,]),
@@ -91,9 +93,9 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   #Define internal functions
 
   recursive_add <- function(x, y) tryCatch(x + y, error = function(e) Map(recursive_add, x, y))
+  recursive_subtract <- function(x, y) tryCatch(x - y, error = function(e) Map(recursive_subtract, x, y))
   recursive_mult <- function(x, y) tryCatch(x * y, error = function(e) Map(recursive_mult, x, y))
   recursive_RMSprop <- function(x, y) tryCatch(LR/sqrt(x+1e-10) * y, error = function(e) Map(recursive_RMSprop, x, y))
-
 
   makeConvLayer <- function(convParms, convBias){
     # time-varying portion
@@ -359,7 +361,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       hlbatch <- calc_hlayers(plist, X = Xd,
                               param = param[curBat,], fe_var = fe_var[curBat], 
                               nlayers = nlayers, convolutional = convolutional, activ = activation)
-      # update hidden layers
+      # update hidden layers based on batch
       if (length(nlayers)>1){
         for (p in 1:length(nlayers)){
           for (h in 1:nlayers[p]){
@@ -384,7 +386,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       # Calculate gradients for minibatch
       grads_p <- calc_grads(plist = plist, hlay = hlbatch, Xd = Xd, y = y[curBat]
         , yhat = yhat, droplist = droplist, nlayers = nlayers)
-      grads <- reconstitute(grads_p, droplist, parlist, nlayers)
+      grads <- reconstitute(grads_p, droplist, parlist, nlayers) # put zeros back in after dropout...
       # Calculate updates to parameters based on gradients and learning rates
       if (RMSprop == TRUE){
         newG2 <- rapply(grads, function(x){.1*x^2}, how = "list")
@@ -407,14 +409,13 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
         wd <- rapply(parlist, function(x){x*lam*LR}, how = "list")
         wd <- recursive_mult(wd, ppmask)
         updates <- as.relistable(recursive_add(updates, wd))
-        parlist <- as.relistable(parlist)
         # don't update the pass-through weights for the non-time-varying variables when using conv 
         if (!is.null(convolutional)){
           updates[[1]][,colnames(updates[[1]]) %ni% convolutional$topology] <- 0
         }
       }
       # Update parameters from update list
-      parlist <- relist(unlist(parlist) - unlist(updates))
+      parlist <- recursive_subtract(parlist, updates)
       # parlist <- mapply('-', parlist, updates)
       if (OLStrick == TRUE & (iter %% OLStrick_interval == 0 | iter == 0)){ # do OLStrick on first iteration
         # Update hidden layers
@@ -426,12 +427,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                                      , penalize_toplayer, nlayers = nlayers)
       }
       #update yhat for purpose of computing loss function
-      
-      ##############
-    #   left off here
-      ################
-      
-      yhat <- getYhat(parlist, hlay = hlayers)
+      yhat <- getYhat(parlist, hlay = hlayers, param, y, ydm, fe_var, nlayers) # update yhat for purpose of computing gradients
       mse <- mseold <- mean((y-yhat)^2)
       if (length(nlayers)>1){
         B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
@@ -593,12 +589,11 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   # revert to parlist_best
   if(return_best == TRUE){
     parlist <- parlist_best
-    hlayers <- calc_hlayers(parlist, X = X, param = param,
-                            fe_var = fe_var, nlayers = nlayers,
-                            convolutional = convolutional, activ = activation)
+    hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var,
+                            nlayers = nlayers, convolutional = convolutional, activ = activation)
   }    
   # final values...
-  yhat <- getYhat(parlist, hlay = hlayers)
+  yhat <- getYhat(parlist, hlay = hlayers, param, y, ydm, fe_var, nlayers) 
   mse <- mseold <- mean((y-yhat)^2)
   if (length(nlayers)>1){
     B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
@@ -621,13 +616,13 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     fe_output <- NULL
   } else {
     # compute FE output
-    if(length(nlayers)>2){
+    if(length(nlayers)>1){
       Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
-        hlay[[i]][[length(hlay[[i]])]]
+        hlayers[[i]][[length(hlayers[[i]])]]
       }
       Zdm <- demeanlist(as.matrix(Z), list(fe_var))
       B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
-      fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(pl$beta_param, B)))
+      fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(parlist$beta_param, B)))
     } else {
       Zdm <- demeanlist(as.matrix(hlayers[[length(hlayers)]]), list(fe_var))
       Zdm <- Matrix(Zdm)
