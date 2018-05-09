@@ -3,13 +3,14 @@
 
 
 predict.panelNNET <-
-function(obj, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
+function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
          , numerical_jacobian = FALSE, parallel_jacobian = FALSE, convolutional = NULL){
 # obj = pr_obj
 # newX = stop_early$X_test
 # fe.newX = stop_early$fe_test
 # new.param = stop_early$P_test
 # se_fit = F
+# y_test = stop_early$y_test
 # convolutional = NULL
   if (obj$activation == 'tanh'){
     activ <- tanh
@@ -26,7 +27,7 @@ function(obj, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
   if (is.null(newX)){
     return(obj$yhat)
   } else {
-    if (!all(unique(fe.newX) %in% unique(obj$fe$fe_var))){
+    if (!all(unique(fe.newX) %in% unique(obj$fe$fe_var)) & is.null(y_test)){
       stop('New data has cross-sectional units not observed in training data')
     }
     #Scale the new data by the scaling rules in the training data
@@ -34,14 +35,46 @@ function(obj, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
     pvec <- unlist(plist)
     #prepare fe's in advance...
     if (!is.null(obj$fe)){
-      # OLD version here is mega-slow:
-      # FEs_to_merge_o <- foreach(i = 1:length(unique(obj$fe$fe_var)), .combine = rbind) %do% {
-      #   #Because of numerical error, fixed effects within units can sometimes be slightly different.  This averages them.
-      #   data.frame(unique(obj$fe$fe_var)[i], mean(obj$fe$fe[obj$fe$fe_var == unique(obj$fe$fe_var)[i]]))
-      # }
-      # colnames(FEs_to_merge_o) <- c('fe_var','fe')
       # new version is faster but depends on doBy package:
       FEs_to_merge <- summaryBy(fe~fe_var, data = obj$fe, keep.names = T)
+      # If there is a labeled outcome in the test set (i.e.: early stopping) compute FE's and append them
+      if (any(unique(fe.newX) %in% unique(obj$fe$fe_var)) & !is.null(y_test)){
+        # rescale new data to scale of training data
+        D <- foreach(i = 1:length(obj$X)) %do% {
+          sweep(sweep(newX[[i]][fe.newX %ni% obj$fe$fe_var,], 
+                      2, 
+                      STATS = attr(obj$X[[i]], "scaled:center"), FUN = '-'), 
+                2, STATS = attr(obj$X[[i]], "scaled:scale"), FUN = '/')
+        }
+        if (!is.null(obj$param)){
+          P <- sweep(sweep(new.param[fe.newX %ni% obj$fe$fe_var,], 
+                           MARGIN = 2, 
+                           STATS = attr(obj$param, "scaled:center"), 
+                           FUN = '-'), 
+                     MARGIN = 2, 
+                     STATS = attr(obj$param, "scaled:scale"), 
+                     FUN = '/')
+        } else {P <- NULL}
+        # compute hidden layers
+        HL <- calc_hlayers(parlist = obj$parlist, 
+                           X = D, 
+                           param = P, 
+                           fe_var = fe.newX[fe.newX %ni% obj$fe$fe_var], 
+                           nlayers = nlayers,
+                           activation = obj$activation)
+        
+        Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
+          HL[[i]][[length(HL[[i]])]]
+        }
+        Zdm <- demeanlist(as.matrix(Z), list(fe_var[fe.newX %ni% obj$fe$fe_var]))
+        B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
+        ydm_test <- demeanlist(y_test[fe.newX %ni% obj$fe$fe_var], list(fe.newX[fe.newX %ni% obj$fe$fe_var]))
+        fe <- (y_test[fe.newX %ni% obj$fe$fe_var]-ydm_test) - 
+          MatMult(as.matrix(Z)-Zdm, as.matrix(c(parlist$beta_param, B)))
+        FEs_to_append <- summaryBy(fe~fe_var, keep.names = T,
+                                   data = data.frame(fe = fe, fe_var = fe.newX[fe.newX %ni% obj$fe$fe_var]))
+        FEs_to_merge <- rbind(FEs_to_merge, FEs_to_append)
+      }
     } else {FEs_to_merge <- NULL}
     #(predfun is defined below)
     nlayers <- sapply(obj$hidden_layers, length)

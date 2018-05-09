@@ -47,7 +47,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # Xp <- dat[,c("y", "y2")]
 # Xp <- Xp[sapply(Xp, sd) > 0]
 # 
-# is <- dat$year%%2==1
+# is <- dat$year%%2==1 & dat$state == "17"
 # oos <- is == F
 # y = dat$yield[is]
 # X = list(X1[is,], X2[is,])
@@ -86,7 +86,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 #                   X_test = list(X1[oos,], X2[oos,]),
 #                   P_test = as.matrix(Xp[oos,]),
 #                   fe_test = dat$fips[oos])
-# stop_early <- NULL
+# # stop_early <- NULL
 
 
   ##########
@@ -294,6 +294,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                    convolutional = NULL,
                    hidden_layers = hidden_units)
     pr_test <- predict.panelNNET(obj = pr_obj, 
+                                 y_test = stop_early$y_test,
                                  newX = stop_early$X_test, 
                                  fe.newX = stop_early$fe_test, 
                                  new.param = stop_early$P_test)
@@ -505,6 +506,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                          convolutional = NULL,
                          hidden_layers = hidden_units)
           pr_test <- predict.panelNNET(obj = pr_obj, 
+                                       y_test = stop_early$y_test,
                                        newX = stop_early$X_test, 
                                        fe.newX = stop_early$fe_test, 
                                        new.param = stop_early$P_test)
