@@ -481,7 +481,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
             # compute FE output
             if(length(nlayers)>1){
               Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
-                hlay[[i]][[length(hlay[[i]])]]
+                hlayers[[i]][[length(hlayers[[i]])]]
               }
               Zdm <- demeanlist(as.matrix(Z), list(fe_var))
               B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
