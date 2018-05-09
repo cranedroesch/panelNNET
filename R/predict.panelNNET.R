@@ -44,6 +44,7 @@ function(obj, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
       FEs_to_merge <- summaryBy(fe~fe_var, data = obj$fe, keep.names = T)
     } else {FEs_to_merge <- NULL}
     #(predfun is defined below)
+    nlayers <- sapply(obj$hidden_layers, length)
     if (length(nlayers)>1){
       yhat <- predfun_multinet(plist = plist, obj = obj, newX = newX, fe.newX = fe.newX
                       , new.param = new.param, FEs_to_merge = FEs_to_merge) 
