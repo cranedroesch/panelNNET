@@ -1,4 +1,4 @@
-calc_grads<- function(plist, hlay, Xd, y, yhat, droplist = NULL, nlayers, convolutional = NULL){
+calc_grads<- function(plist, hlay, Xd, y, yhat, droplist = NULL, nlayers, convolutional = NULL, activ_prime){
 # plist <- parlist
 # hlay <- hlayers
 # Xd <- X

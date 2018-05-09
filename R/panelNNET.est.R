@@ -323,7 +323,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   }
   LRvec <- LR <- start.LR# starting step size
   #Calculate gradients
-  grads <- calc_grads(parlist, hlayers, X, y, yhat, droplist = NULL, nlayers)
+  grads <- calc_grads(parlist, hlayers, X, y, yhat, droplist = NULL, nlayers, activ_prime = activ_prime)
   #Initialize updates
   updates <- relist(unlist(parlist)*0)
   #initialize G2 term for RMSprop
@@ -385,7 +385,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       } 
       # Calculate gradients for minibatch
       grads_p <- calc_grads(plist = plist, hlay = hlbatch, Xd = Xd, y = y[curBat]
-        , yhat = yhat, droplist = droplist, nlayers = nlayers)
+        , yhat = yhat, droplist = droplist, nlayers = nlayers, activ_prime = activ_prime)
       grads <- reconstitute(grads_p, droplist, parlist, nlayers) # put zeros back in after dropout...
       # Calculate updates to parameters based on gradients and learning rates
       if (RMSprop == TRUE){
