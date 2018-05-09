@@ -67,7 +67,7 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
         Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
           HL[[i]][[length(HL[[i]])]]
         }
-        Zdm <- demeanlist(as.matrix(Z), list(fe_var[fe.newX %ni% obj$fe$fe_var]))
+        Zdm <- demeanlist(as.matrix(Z), list(fe.newX[fe.newX %ni% obj$fe$fe_var]))
         B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
         ydm_test <- demeanlist(y_test[fe.newX %ni% obj$fe$fe_var], list(fe.newX[fe.newX %ni% obj$fe$fe_var]))
         fe <- (y_test[fe.newX %ni% obj$fe$fe_var]-ydm_test) - 
