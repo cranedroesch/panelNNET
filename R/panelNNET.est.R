@@ -479,7 +479,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
             fe_output <- NULL
           } else {
             # compute FE output
-            if(length(nlayers)>2){
+            if(length(nlayers)>1){
               Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
                 hlay[[i]][[length(hlay[[i]])]]
               }
