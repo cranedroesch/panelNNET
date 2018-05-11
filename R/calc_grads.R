@@ -9,76 +9,29 @@ calc_grads<- function(plist, hlay, Xd, y, yhat, droplist = NULL, nlayers, convol
 # curBat = curBat
   # if (is.null(yhat)){yhat <- getYhat(plist, hlay = hlay)}
   NL <- nlayers + as.numeric(!is.null(convolutional))
-  if (length(NL)>1){
-    grads <- foreach(p = 1:length(NL)) %do% {
-      grads <- grad_stubs <- vector('list', NL[p] + 1)
-      grad_stubs[[length(grad_stubs)]] <- getDelta(as.matrix(y), yhat)
-      for (i in NL[p]:1){
-        if (i == NL[p]){outer_param = as.matrix(c(plist[[p]]$beta))} else {outer_param = plist[[p]][[i+1]]}
-        if (i == 1){lay = Xd[[p]]} else {lay= hlay[[p]][[i-1]]}
-        #add the bias
-        lay <- cbind(1, lay) #add bias to the hidden layer
-        if (i != NL[p]){outer_param <- outer_param[-1,, drop = FALSE]}      #remove parameter on upper-layer bias term
-        grad_stubs[[i]] <- activ_prime(MatMult(lay, plist[[p]][[i]])) * MatMult(grad_stubs[[i+1]], Matrix::t(outer_param))
-      }
-      grad_stubs <- lapply(grad_stubs, as.matrix)
-      for (i in 1:length(grad_stubs)){
-        if (i == 1){lay = as.matrix(Xd[[p]])} else {lay= hlay[[p]][[i-1]]}
-        if (i != length(grad_stubs)){# don't add bias term to top layer when there are fixed effects present
-          lay <- cbind(1, lay) #add bias to the hidden layer
-        }
-        grads[[i]] <- eigenMapMatMult(t(lay), as.matrix(grad_stubs[[i]]))
-      }
-      return(grads)
-    }
-    # add on parametric gradients
-    grads[[length(grads)+1]] <- MatMult(t(hlay$param), getDelta(as.matrix(y), yhat)) 
-  } else {
-    grads <- grad_stubs <- vector('list', NL + 1)
+  grads <- foreach(p = 1:length(NL)) %do% {
+    grads <- grad_stubs <- vector('list', NL[p] + 1)
     grad_stubs[[length(grad_stubs)]] <- getDelta(as.matrix(y), yhat)
-    for (i in NL:1){
-      # print(i)
-      if (i == NL){outer_param = as.matrix(c(plist$beta))} else {outer_param = plist[[i+1]]}
-      if (i == 1){lay = Xd} else {lay = hlay[[i-1]]}
+    for (i in NL[p]:1){
+      if (i == NL[p]){outer_param = as.matrix(c(plist[[p]]$beta))} else {outer_param = plist[[p]][[i+1]]}
+      if (i == 1){lay = Xd[[p]]} else {lay= hlay[[p]][[i-1]]}
       #add the bias
       lay <- cbind(1, lay) #add bias to the hidden layer
-      if (i != NL){outer_param <- outer_param[-1,, drop = FALSE]}      #remove parameter on upper-layer bias term
-      grad_stubs[[i]] <- activ_prime(MatMult(lay, plist[[i]])) * MatMult(grad_stubs[[i+1]], Matrix::t(outer_param))
+      if (i != NL[p]){outer_param <- outer_param[-1,, drop = FALSE]}      #remove parameter on upper-layer bias term
+      grad_stubs[[i]] <- activ_prime(MatMult(lay, plist[[p]][[i]])) * MatMult(grad_stubs[[i+1]], Matrix::t(outer_param))
     }
-    # multiply the gradient stubs by their respective layers to get the actual gradients
-    # first coerce them to regular matrix classes so that the C code for matrix multiplication can speed things up
     grad_stubs <- lapply(grad_stubs, as.matrix)
-    hlay <- lapply(hlay, as.matrix)
     for (i in 1:length(grad_stubs)){
-      if (i == 1){lay = as.matrix(Xd)} else {lay= hlay[[i-1]]}
+      if (i == 1){lay = as.matrix(Xd[[p]])} else {lay= hlay[[p]][[i-1]]}
       if (i != length(grad_stubs)){# don't add bias term to top layer when there are fixed effects present
         lay <- cbind(1, lay) #add bias to the hidden layer
       }
       grads[[i]] <- eigenMapMatMult(t(lay), as.matrix(grad_stubs[[i]]))
-    } 
+    }
+    return(grads)
   }
-  # #process the gradients for the convolutional layers
-  # if (!is.null(convolutional)){
-  #   if (!is.null(droplist)){
-  #     warning("dropout not yet made to work with conv nets")
-  #   }
-  #   #mask out the areas not in use
-  #   gg <- grads[[1]] * convMask
-  #   #gradients for conv layer.  pooling via rowMeans
-  #   grads_convParms <- foreach(i = 1:convolutional$Nconv) %do% {
-  #     idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
-  #     rowMeans(foreach(j = idx, .combine = cbind) %do% {x <- gg[,j]; x[1] <- -999; x[x!=0][-1]})
-  #   }
-  #   grads_convBias <- foreach(i = 1:convolutional$Nconv, .combine = c) %do% {
-  #     idx <- (1+N_TV_layers*(i-1)):(N_TV_layers*i)
-  #     mean(gg[1,idx])
-  #   }
-  #   # make the layer
-  #   convGrad <- makeConvLayer(grads_convParms, grads_convBias)
-  #   #set the gradients on the time-invariant terms to zero
-  #   convGrad[,(N_TV_layers * convolutional$Nconv+1):ncol(convGrad)] <- 0
-  #   grads[[1]] <- convGrad
-  # }
+  # add on parametric gradients
+  grads[[length(grads)+1]] <- MatMult(t(hlay$param), getDelta(as.matrix(y), yhat)) 
   return(grads)
 }
 

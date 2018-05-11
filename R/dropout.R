@@ -5,40 +5,22 @@
 gen_droplist <- function(dropout_hidden, dropout_input, nlayers, hlayers, X){
   if (dropout_hidden < 1){
     Xd <- dropinp <- list()
-    if (length(nlayers)>1){ #multinet case
-      DL <- foreach(i = 1:length(nlayers)) %do% {
-        droplist <- lapply(hlayers[[i]], function(x){
-          todrop <- as.logical(rbinom(ncol(x), 1, dropout_hidden))
-          if (all(todrop==FALSE)){#ensure that at least one unit is present
-            todrop[sample(1:length(todrop))] <- TRUE
-          }
-          return(todrop)
-        })
-        todrop <- rbinom(ncol(X[[i]]), 1, dropout_input)
-        if (all(todrop==FALSE)){# ensure that at least one unit is present
-          todrop[sample(1:length(todrop))] <- TRUE
-        }
-        droplist <- c(list(as.logical(todrop)), droplist)
-        return(droplist)
-      }
-      droplist <- DL
-    } else { #not multinet
-      droplist <- lapply(hlayers, function(x){
+    DL <- foreach(i = 1:length(nlayers)) %do% {
+      droplist <- lapply(hlayers[[i]], function(x){
         todrop <- as.logical(rbinom(ncol(x), 1, dropout_hidden))
         if (all(todrop==FALSE)){#ensure that at least one unit is present
           todrop[sample(1:length(todrop))] <- TRUE
         }
         return(todrop)
       })
-      # remove the parametric terms from dropout contention
-      droplist[[nlayers]][1:length(parlist$beta_param)] <- TRUE
-      # dropout from the input layer
-      todrop <- rbinom(ncol(X), 1, dropout_input)
+      todrop <- rbinom(ncol(X[[i]]), 1, dropout_input)
       if (all(todrop==FALSE)){# ensure that at least one unit is present
         todrop[sample(1:length(todrop))] <- TRUE
       }
-      droplist <- c(as.logical(todrop), droplist)
+      droplist <- c(list(as.logical(todrop)), droplist)
+      return(droplist)
     }
+    droplist <- DL
   } else {droplist <- NULL}
   return(droplist)
 }
