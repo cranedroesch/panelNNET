@@ -391,7 +391,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
         }
         wd <- rapply(parlist, function(x){x*lam*LR}, how = "list")
         wd <- recursive_mult(wd, ppmask)
-        updates <- as.relistable(recursive_add(updates, wd))
+        updates <- as.relistable(recursive_subtract(updates, wd))
         # don't update the pass-through weights for the non-time-varying variables when using conv 
         if (!is.null(convolutional)){
           updates[[1]][,colnames(updates[[1]]) %ni% convolutional$topology] <- 0
