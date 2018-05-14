@@ -7,34 +7,23 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
   # lam <- pnn$lam
   # parapen <- pnn$parapen
   # hidden_layers <- hlayers
-  if (names(parlist)[[1]] == "p1"){
-    const <- parlist$beta_param*parapen
-    if (penalize_toplayer == TRUE){
-      for (i in 1:(length(parlist)-1)){
-        const <- c(const, parlist[[i]]$beta)
-      }
-    }
-    constraint <- sum(const^2)
-    Zdm <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
-      hidden_layers[[i]][[length(hidden_layers[[i]])]]
-    }
-    Zdm <- cbind(hidden_layers$param, Zdm)
-    if (!is.null(fe_var)){
-      Zdm <- demeanlist(Zdm, list(fe_var))
-      targ <- demeanlist(y, list(fe_var))      
-    }  else {
-      targ <- y
-    }   
-  } else { #regular/non-multinet
-    constraint <- sum(c(parlist$beta_param*parapen, parlist$beta)^2)    
-    if (!is.null(fe_var)){
-      Zdm <- demeanlist(as.matrix(hidden_layers[[length(hidden_layers)]]), list(fe_var))
-      targ <- demeanlist(y, list(fe_var))
-    } else {
-      Zdm <- hidden_layers[[length(hidden_layers)]]
-      targ <- y
+  const <- parlist$beta_param*parapen
+  if (penalize_toplayer == TRUE){
+    for (i in 1:(length(parlist)-1)){
+      const <- c(const, parlist[[i]]$beta)
     }
   }
+  constraint <- sum(const^2)
+  Zdm <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
+    hidden_layers[[i]][[length(hidden_layers[[i]])]]
+  }
+  Zdm <- cbind(hidden_layers$param, Zdm)
+  if (!is.null(fe_var)){
+    Zdm <- demeanlist(Zdm, list(fe_var))
+    targ <- demeanlist(y, list(fe_var))      
+  }  else {
+    targ <- y
+  }   
   #set up the penalty vector
   D <- rep(1, ncol(Zdm))
   D[1:length(parapen)] <- D[1:length(parapen)]*parapen #incorporate parapen into diagonal of covmat
@@ -70,15 +59,11 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
     # b <- as.numeric(MatMult(ginv(ZtZ + diag(D)*as.numeric(newlam)), Zty))
   }    
   parlist$beta_param <- b[1:length(parlist$beta_param)]
-  if (names(parlist)[[1]] == "p1"){
-    leftoff <- length(parlist$beta_param)
-    for (i in 1:(length(parlist)-1)){
-      idx <- (leftoff+1):(leftoff+length(parlist[[i]]$beta))
-      parlist[[i]]$beta <- b[idx]
-      leftoff <- max(idx)
-    }
-  } else {
-    parlist$beta <- b[(length(parlist$beta_param)+1):length(b)]    
+  leftoff <- length(parlist$beta_param)
+  for (i in 1:(length(parlist)-1)){
+    idx <- (leftoff+1):(leftoff+length(parlist[[i]]$beta))
+    parlist[[i]]$beta <- b[idx]
+    leftoff <- max(idx)
   }
   return(parlist)
 }
