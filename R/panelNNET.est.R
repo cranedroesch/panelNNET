@@ -244,12 +244,14 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   }
   parlist <- as.relistable(parlist)
   #if there are no FE's, append a 0 to the front of the parapen vec, to leave the intercept unpenalized
-  if(is.null(fe_var) & !is.null(param)){
-    parapen <- c(0, parapen)
-  }
-  if(is.null(fe_var) & is.null(param)){
-    parapen <- 0
-  }
+  if (!is.null(param)){
+    if(is.null(fe_var) & !is.null(param)){
+      parapen <- c(0, parapen)
+    }
+    if(is.null(fe_var) & is.null(param)){
+      parapen <- 0
+    }
+  } else {parapen <- 1}
   #compute hidden layers given parlist
   hlayers <- calc_hlayers(parlist, X = X, param = param, 
                           fe_var = fe_var, nlayers = nlayers, 
