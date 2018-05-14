@@ -396,7 +396,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
         }
       }
       # Update parameters from update list
-      parlist <- recursive_subtract(parlist, updates)
+      parlist <- recursive_add(parlist, updates)
       # parlist <- mapply('-', parlist, updates)
       if (OLStrick == TRUE & (iter %% OLStrick_interval == 0 | iter == 0)){ # do OLStrick on first iteration
         # Update hidden layers
