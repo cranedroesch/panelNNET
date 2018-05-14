@@ -31,7 +31,9 @@ calc_grads<- function(plist, hlay, Xd, y, yhat, droplist = NULL, nlayers, convol
     return(grads)
   }
   # add on parametric gradients
-  grads[[length(grads)+1]] <- MatMult(t(hlay$param), getDelta(as.matrix(y), yhat)) 
+  if (!is.null(plist$beta_param)){
+    grads[[length(grads)+1]] <- MatMult(t(hlay$param), getDelta(as.matrix(y), yhat)) 
+  }
   return(grads)
 }
 
