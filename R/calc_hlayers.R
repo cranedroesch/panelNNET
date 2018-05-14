@@ -25,7 +25,7 @@ calc_hlayers <- function(parlist, X = X, param = param, fe_var = fe_var, nlayers
     colnames(hlayers[[p]][[i]]) <- paste0("p_",p, '_nodes',1:ncol(hlayers[[p]][[i]]))
   }
   hlayers$param <- param
-  if !is.null(param){
+  if (!is.null(param)){
     colnames(hlayers$param) <- paste0('param',1:ncol(param))
   }
   if (is.null(fe_var)){#add intercept if no FEs
