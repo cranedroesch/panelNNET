@@ -5,12 +5,16 @@
 predict.panelNNET <-
 function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
          , numerical_jacobian = FALSE, parallel_jacobian = FALSE, convolutional = NULL){
-# obj = pr_obj
+# obj = pnn
+#   newX = as.matrix(Xtest)
+#   new.param = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],])
+#   fe.newX = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]]
 # newX = stop_early$X_test
 # fe.newX = stop_early$fe_test
 # new.param = stop_early$P_test
 # se_fit = F
 # y_test = stop_early$y_test
+#   y_test <- NULL
 # convolutional = NULL
   if (obj$activation == 'tanh'){
     activ <- tanh
@@ -27,6 +31,9 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
   if (is.null(newX)){
     return(obj$yhat)
   } else {
+    if (class(newX) != "list"){
+      newX <- list(newX)
+    }
     if (!all(unique(fe.newX) %in% unique(obj$fe$fe_var)) & is.null(y_test)){
       stop('New data has cross-sectional units not observed in training data')
     }
@@ -78,14 +85,8 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
       }
     } else {FEs_to_merge <- NULL}
     #(predfun is defined below)
-    nlayers <- sapply(obj$hidden_layers, length)
-    if (length(nlayers)>1){
-      yhat <- predfun_multinet(plist = plist, obj = obj, newX = newX, fe.newX = fe.newX
-                      , new.param = new.param, FEs_to_merge = FEs_to_merge) 
-    } else {
-      yhat <- predfun(plist = plist, obj = obj, newX = newX, fe.newX = fe.newX
-                      , new.param = new.param, FEs_to_merge = FEs_to_merge)
-    }
+    yhat <- predfun_multinet(plist = plist, obj = obj, newX = newX, fe.newX = fe.newX
+                    , new.param = new.param, FEs_to_merge = FEs_to_merge) 
     if (se.fit == FALSE){
       return(yhat)
     } else {
@@ -146,7 +147,7 @@ predfun_multinet <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param 
   if (obj$activation == 'lrelu'){
     activ <- lrelu
   }
-  nlayers <- sapply(obj$hidden_layers, length)
+  nlayers <- sapply(obj$hidden_units, length)
   # rescale new data to scale of training data
   D <- foreach(i = 1:length(obj$X)) %do% {
     sweep(sweep(newX[[i]], 2, STATS = attr(obj$X[[i]], "scaled:center"), FUN = '-'), 2, STATS = attr(obj$X[[i]], "scaled:scale"), FUN = '/')
