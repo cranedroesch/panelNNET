@@ -36,21 +36,27 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
   # find implicit lambda
   b <- c(unlist(parlist)[grepl("beta", names(unlist(parlist)))])
   b <- c(b[grepl("param", names(b))], b[!grepl("param", names(b))])
-  # Zty <- MatMult(t(Zdm), targ)
-  # ZtZ <- MatMult(t(Zdm), Zdm)
   if (constraint >0){
-    # f <- function(L){
-    #   bi <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(L)), Zty)), error = function(e){b})
-    #   (crossprod(bi*D) - constraint)^2
-    # }
+    # scale the data
+    sZdm <- colScale(Zdm)
+    starg <- scale(targ)
+    Zty <- MatMult(t(sZdm), starg)
+    ZtZ <- MatMult(t(sZdm), sZdm)
     f <- function(L){
-      bi <- as.numeric(as.matrix(coef(glmnet(Zdm, targ, lambda = L, intercept = F, standardize = T, alpha = 0, penalty.factor = D))))[-1]
+      bi <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(L)), Zty)), error = function(e){b})
+      bi <- bi*attr(starg, "scaled:scale")/attr(sZdm, "scaled:scale")
       (crossprod(bi*D) - constraint)^2
     }
+    # f <- function(L){
+    #   bi <- as.numeric(as.matrix(coef(glmnet(Zdm, targ, lambda = L, intercept = F, standardize = T, alpha = 0, penalty.factor = D))))[-1]
+    #   (crossprod(bi*D) - constraint)^2
+    # }
     o <- optim(par = lam, f = f, method = 'Brent', lower = lam, upper = 1e9)
     newlam2 <- o$par
     #New top-level params
-    b <- as.numeric(coef(glmnet(Zdm, targ, lambda = newlam2, standardize = T, intercept = F, alpha = 0, penalty.factor = D)))[-1]
+    b <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(newlam2)), Zty)), error = function(e){b})
+    b <- b*attr(starg, "scaled:scale")/attr(sZdm, "scaled:scale")
+    # b <- as.numeric(coef(glmnet(Zdm, targ, lambda = newlam2, standardize = T, intercept = F, alpha = 0, penalty.factor = D)))[-1]
   } else {
     Zty <- MatMult(t(Zdm), targ)
     ZtZ <- MatMult(t(Zdm), Zdm)
@@ -71,54 +77,3 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
   }
   return(parlist)
 }
-
-library(matrixStats)
-
-colScale = function(x,
-                    center = TRUE,
-                    scale = TRUE,
-                    add_attr = TRUE,
-                    rows = NULL,
-                    cols = NULL) {
-  
-  if (!is.null(rows) && !is.null(cols)) {
-    x <- x[rows, cols, drop = FALSE]
-  } else if (!is.null(rows)) {
-    x <- x[rows, , drop = FALSE]
-  } else if (!is.null(cols)) {
-    x <- x[, cols, drop = FALSE]
-  }
-  
-  ################
-  # Get the column means
-  ################
-  cm = colMeans(x, na.rm = TRUE)
-  ################
-  # Get the column sd
-  ################
-  if (scale) {
-    csd = colSds(x, center = cm)
-  } else {
-    # just divide by 1 if not
-    csd = rep(1, length = length(cm))
-  }
-  if (!center) {
-    # just subtract 0
-    cm = rep(0, length = length(cm))
-  }
-  x = t( (t(x) - cm) / csd )
-  if (add_attr) {
-    if (center) {
-      attr(x, "scaled:center") <- cm
-    }
-    if (scale) {
-      attr(x, "scaled:scale") <- csd
-    }
-  }
-  return(x)
-}
-
-
-
-
-

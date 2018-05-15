@@ -146,13 +146,13 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   ###########################
   # do scaling
   if (class(X) == "list"){
-    X <- lapply(X, scale)
+    X <- lapply(X, colScale)
   } else { # make it a list if it isn't
-    X <- list(scale(X))
+    X <- list(colScale(X))
     hidden_units <- list(hidden_units)
   }
   if (!is.null(param)){
-    param <- scale(param)
+    param <- colScale(param)
   }
   if (activation == 'tanh'){
     activ <- tanh
