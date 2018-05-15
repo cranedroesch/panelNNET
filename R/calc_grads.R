@@ -1,4 +1,4 @@
-calc_grads<- function(plist, hlay, Xd, y, yhat, droplist = NULL, nlayers, convolutional = NULL, activ_prime){
+calc_grads<- function(plist, hlay, Xd, y, yhat, droplist = NULL, nlayers, convolutional = NULL, activ_prime, normalize = TRUE){
 # plist <- parlist
 # hlay <- hlayers
 # Xd <- X
@@ -33,6 +33,10 @@ calc_grads<- function(plist, hlay, Xd, y, yhat, droplist = NULL, nlayers, convol
   # add on parametric gradients
   if (!is.null(hlay$param)){
     grads[[length(grads)+1]] <- MatMult(t(hlay$param), getDelta(as.matrix(y), yhat)) 
+  }
+  if (normalize == TRUE){
+    fac <- mean(abs(unlist(grads)))
+    grads <- recursive_mult(grads, 1/fac)
   }
   return(grads)
 }
