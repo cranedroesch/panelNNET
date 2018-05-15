@@ -35,14 +35,11 @@ calc_grads<- function(plist, hlay, Xd, y, yhat, droplist = NULL, nlayers, convol
     grads[[length(grads)+1]] <- MatMult(t(hlay$param), getDelta(as.matrix(y), yhat)) 
   }
   if (normalize == TRUE){
-    fac <- mean(abs(unlist(grads)))
-    print(fac)
-    grads <- recursive_mult(grads, 1/fac)
+    fac <- 1/mean(unlist(grads))
+    grads <- recursive_mult(grads, fac)
   }
   return(grads)
 }
-
-
 
 
 # old version:

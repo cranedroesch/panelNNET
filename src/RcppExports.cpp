@@ -18,16 +18,7 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// rcppeigen_hello_world
-Eigen::MatrixXd rcppeigen_hello_world();
-RcppExport SEXP _panelNNET_rcppeigen_hello_world() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(rcppeigen_hello_world());
-    return rcpp_result_gen;
-END_RCPP
-}
+
 // rcppeigen_outerproduct
 Eigen::MatrixXd rcppeigen_outerproduct(const Eigen::VectorXd& x);
 RcppExport SEXP _panelNNET_rcppeigen_outerproduct(SEXP xSEXP) {
@@ -64,7 +55,6 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_panelNNET_eigenMapMatMult", (DL_FUNC) &_panelNNET_eigenMapMatMult, 2},
-    {"_panelNNET_rcppeigen_hello_world", (DL_FUNC) &_panelNNET_rcppeigen_hello_world, 0},
     {"_panelNNET_rcppeigen_outerproduct", (DL_FUNC) &_panelNNET_rcppeigen_outerproduct, 1},
     {"_panelNNET_rcppeigen_innerproduct", (DL_FUNC) &_panelNNET_rcppeigen_innerproduct, 1},
     {"_panelNNET_rcppeigen_bothproducts", (DL_FUNC) &_panelNNET_rcppeigen_bothproducts, 1},
