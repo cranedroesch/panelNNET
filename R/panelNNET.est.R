@@ -90,12 +90,12 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 
   # y = dat$yield[bsamp]
   # X = Xpc
-  # hidden_units = 10
+  # hidden_units = rep(100, 10)
   # fe_var = dat$fips[bsamp]
-  # maxit = 100
+  # maxit = 1000
   # lam = .001
   # time_var = dat$year[bsamp]
-  # param = Xp[bsamp,, drop = F]
+  # param = Xp[bsamp,]
   # verbose = T
   # report_interval = 1
   # gravity = 1.01
@@ -103,15 +103,20 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   # activation = 'lrelu'
   # start_LR = .001
   # parlist = NULL
-  # OLStrick = T
+  # OLStrick = F
   # OLStrick_interval = 25
   # batchsize = 256
-  # maxstopcounter = 250
+  # maxstopcounter = 25
   # LR_slowing_rate = 2
   # parapen = c(0,0,rep(1, ncol(Xp)-2))
   # return_best = TRUE
   # RMSprop = T
-  # #
+  # stop_early = list(check_every = 20,
+  #                   max_ES_stopcounter = 5,
+  #                   y_test = dat$yield[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]],
+  #                   X_test = as.matrix(Xtest),
+  #                   P_test = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],]),
+  #                   fe_test = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]])
   # convolutional = NULL
   # penalize_toplayer = TRUE
   # RMSprop = TRUE
