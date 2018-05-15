@@ -36,20 +36,24 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
   # find implicit lambda
   b <- c(unlist(parlist)[grepl("beta", names(unlist(parlist)))])
   b <- c(b[grepl("param", names(b))], b[!grepl("param", names(b))])
-  # b <- c(parlist$beta_param, parlist$beta)
-  Zty <- MatMult(t(Zdm), targ)
-  ZtZ <- MatMult(t(Zdm), Zdm)
+  # Zty <- MatMult(t(Zdm), targ)
+  # ZtZ <- MatMult(t(Zdm), Zdm)
   if (constraint >0){
-    f <- function(lam){
-      bi <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(lam)), Zty)), error = function(e){b})
+    # f <- function(L){
+    #   bi <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(L)), Zty)), error = function(e){b})
+    #   (crossprod(bi*D) - constraint)^2
+    # }
+    f <- function(L){
+      bi <- as.numeric(as.matrix(coef(glmnet(Zdm, targ, lambda = L, intercept = F, standardize = T, alpha = 0))))[-1]
       (crossprod(bi*D) - constraint)^2
     }
-    o <- optim(par = lam, f = f, method = 'Brent', lower = lam, upper = 1e9)
+    o <- microbenchmark(optim(par = lam, f = f, method = 'Brent', lower = lam/2, upper = 1e9))
     newlam2 <- o$par
     #New top-level params
-    b <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(newlam2)), Zty)),
-                  error = function(e){b})
+    b <- as.numeric(coef(glmnet(Zdm, targ, lambda = newlam2, standardize = T, intercept = F, alpha = 0)))[-1]
   } else {
+    Zty <- MatMult(t(Zdm), targ)
+    ZtZ <- MatMult(t(Zdm), Zdm)
     b <- tryCatch(as.numeric(MatMult(solve(ZtZ), Zty)),
                   error = function(e){b})
   }
@@ -67,4 +71,10 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
   }
   return(parlist)
 }
+
+
+
+
+
+
 

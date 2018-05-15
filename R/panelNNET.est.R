@@ -89,34 +89,35 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # # stop_early <- NULL
 
   # y = dat$yield[bsamp]
-  # X = Xpc
-  # hidden_units = rep(100, 10)
+  # X = Xpc[,1:10]
+  # hidden_units = rep(2, 1)
   # fe_var = dat$fips[bsamp]
-  # maxit = 1000
-  # lam = .01
+  # maxit = 100
+  # lam = .001
   # time_var = dat$year[bsamp]
-  # param = Xp[bsamp,]
-  # verbose = F
+  # param = Xp[bsamp,5:6, drop = F]
+  # verbose = T
   # report_interval = 1
   # gravity = 1.01
   # convtol = 1e-3
   # activation = 'lrelu'
-  # start_LR = .01
+  # start_LR = .001
   # parlist = NULL
-  # OLStrick = TRUE
+  # OLStrick = T
   # OLStrick_interval = 25
   # batchsize = 256
-  # maxstopcounter = 25
+  # maxstopcounter = 250
   # LR_slowing_rate = 2
-  # dropout_hidden = .5
-  # dropout_input = .8
-  # parapen = c(0,rep(1, ncol(Xp)-1))
+  # parapen = c(1,1)
   # return_best = TRUE
-  # 
+  # RMSprop = T
+  # # 
   # convolutional = NULL
   # penalize_toplayer = TRUE
   # RMSprop = TRUE
-
+  # initialization = 'HZRS'
+  # dropout_hidden <- dropout_input <- 1
+  # stop_early = NULL
   ##########
   #Define internal functions
   recursive_RMSprop <- function(x, y) tryCatch(LR/sqrt(x+1e-10) * y, error = function(e) Map(recursive_RMSprop, x, y))
@@ -261,10 +262,6 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     ydm <<- demeanlist(y, list(fe_var)) 
   }
   if (OLStrick == TRUE){ # do OLStrick before first iteration
-    # Update hidden layers
-    hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var,
-                            nlayers = nlayers, convolutional = convolutional, activ = activation)
-    # OLS trick!
     parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
                                  , fe_var = fe_var, lam = lam, parapen = parapen
                                  , penalize_toplayer, nlayers = nlayers)
