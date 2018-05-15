@@ -261,11 +261,11 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   if (!is.null(fe_var)){
     ydm <<- demeanlist(y, list(fe_var)) 
   }
-  if (OLStrick == TRUE){ # do OLStrick before first iteration
-    parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
-                                 , fe_var = fe_var, lam = lam, parapen = parapen
-                                 , penalize_toplayer, nlayers = nlayers)
-  }
+  # if (OLStrick == TRUE){ # do OLStrick before first iteration
+  #   parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
+  #                                , fe_var = fe_var, lam = lam, parapen = parapen
+  #                                , penalize_toplayer, nlayers = nlayers)
+  # }
   #####################################
   #start setup
   #get starting mse
