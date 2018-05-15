@@ -89,13 +89,13 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # # stop_early <- NULL
 
   # y = dat$yield[bsamp]
-  # X = Xpc[,1:10]
-  # hidden_units = rep(2, 1)
+  # X = Xpc
+  # hidden_units = 10
   # fe_var = dat$fips[bsamp]
   # maxit = 100
   # lam = .001
   # time_var = dat$year[bsamp]
-  # param = Xp[bsamp,5:6, drop = F]
+  # param = Xp[bsamp,, drop = F]
   # verbose = T
   # report_interval = 1
   # gravity = 1.01
@@ -105,10 +105,10 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   # parlist = NULL
   # OLStrick = T
   # OLStrick_interval = 25
-  # batchsize = nrow(X)
+  # batchsize = 256
   # maxstopcounter = 250
   # LR_slowing_rate = 2
-  # parapen = c(1,1)
+  # parapen = c(0,0,rep(1, ncol(Xp)-2))
   # return_best = TRUE
   # RMSprop = T
   # #
