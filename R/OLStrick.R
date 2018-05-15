@@ -47,7 +47,7 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
       bi <- as.numeric(as.matrix(coef(glmnet(Zdm, targ, lambda = L, intercept = F, standardize = T, alpha = 0))))[-1]
       (crossprod(bi*D) - constraint)^2
     }
-    o <- microbenchmark(optim(par = lam, f = f, method = 'Brent', lower = lam/2, upper = 1e9))
+    o <- optim(par = lam, f = f, method = 'Brent', lower = lam, upper = 1e9))\
     newlam2 <- o$par
     #New top-level params
     b <- as.numeric(coef(glmnet(Zdm, targ, lambda = newlam2, standardize = T, intercept = F, alpha = 0)))[-1]
