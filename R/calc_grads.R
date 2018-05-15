@@ -36,6 +36,7 @@ calc_grads<- function(plist, hlay, Xd, y, yhat, droplist = NULL, nlayers, convol
   }
   if (normalize == TRUE){
     fac <- mean(abs(unlist(grads)))
+    print(fac)
     grads <- recursive_mult(grads, 1/fac)
   }
   return(grads)
