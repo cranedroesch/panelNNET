@@ -105,13 +105,13 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   # parlist = NULL
   # OLStrick = T
   # OLStrick_interval = 25
-  # batchsize = 256
+  # batchsize = nrow(X)
   # maxstopcounter = 250
   # LR_slowing_rate = 2
   # parapen = c(1,1)
   # return_best = TRUE
   # RMSprop = T
-  # # 
+  # #
   # convolutional = NULL
   # penalize_toplayer = TRUE
   # RMSprop = TRUE
@@ -310,6 +310,37 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   LRvec <- LR <- start_LR# starting step size
   #Calculate gradients
   grads <- calc_grads(parlist, hlayers, X, y, yhat, droplist = NULL, nlayers, activ_prime = activ_prime)
+  # check gradients
+  # eps <- 1e-5
+  # l <- function(pl){
+  #   hl <- calc_hlayers(pl, X = X, param = param, 
+  #                           fe_var = fe_var, nlayers = nlayers, 
+  #                           convolutional = convolutional, activation = activation)
+  #   yh <- as.numeric(getYhat(pl, hl, param, y, ydm, fe_var, nlayers))
+  #   MSE <- mean((y-yh)^2)
+  #   B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
+  #   lowerpar <- foreach(i = 1:length(nlayers), .combine = c) %do% {unlist(parlist[[i]][1:nlayers[i]])}
+  #   loss <- MSE + lam * sum(c(pl$beta_param*parapen,
+  #                             B*as.numeric(penalize_toplayer),
+  #                             lowerpar)^2)
+  #   return(loss)
+  # }
+  # gcheck <- function(pos){
+  #   pl <- parlist %>% as.relistable %>% unlist
+  #   bvec <- rep(0, length(pl))
+  #   bvec[pos] <- eps
+  #   plup <- (pl + bvec) %>% relist
+  #   pldn <- (pl - bvec) %>% relist
+  #   gsim <- (l(plup) - l(pldn))/(2*eps)
+  #   comp <- (grads %>% as.relistable %>% unlist)[pos]
+  #   print(paste0("calculated: ", comp))
+  #   print(paste0("computed: ", gsim))
+  #   print(paste0("difference: ", comp - gsim))
+  #   print(paste0("ratio: ", comp/gsim))
+  #   
+  # }
+  # gcheck(1)
+
   #Initialize updates
   updates <- relist(unlist(parlist)*0)
   #initialize G2 term for RMSprop
