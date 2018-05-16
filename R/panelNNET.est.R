@@ -382,8 +382,6 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       }
       #update yhat for purpose of computing loss function
       yhat <- getYhat(parlist, hlay = hlayers, param, y, ydm, fe_var, nlayers) # update yhat for purpose of computing gradients
-      plot(x, y)
-      lines(x, yhat, col = "red")
       mse <- mseold <- mean((y-yhat)^2)
       B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
       lowerpar <- foreach(i = 1:length(nlayers), .combine = c) %do% {unlist(parlist[[i]][1:nlayers[i]])}
