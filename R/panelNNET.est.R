@@ -27,10 +27,10 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # y <- 3*sin(x) + u
 # plot(x, y)
 # X <- matrix(x)
-# hidden_units <- c(8:4)
+# hidden_units <- 10:3
 # fe_var = NULL
 # maxit = 1000
-# lam = 0
+# lam = 0.000001
 # time_var = NULL
 # param = NULL
 # verbose = F
@@ -40,8 +40,8 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # activation = 'lrelu'
 # start_LR = .001
 # parlist = NULL
-# OLStrick = F
-# OLStrick_interval = 25
+# OLStrick = T
+# OLStrick_interval = 1
 # batchsize = N
 # maxstopcounter = 25
 # LR_slowing_rate = 2
@@ -59,9 +59,10 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # RMSprop = TRUE
 # initialization = 'HZRS'
 # dropout_hidden <- dropout_input <- 1
-# dropout_hidden <- .5
-# dropout_input <- .8
+# # dropout_hidden <- .9
+# # dropout_input <- .99
 # stop_early = NULL
+
 
   ##########
   #Define internal functions
@@ -207,11 +208,6 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   if (!is.null(fe_var)){
     ydm <<- demeanlist(y, list(fe_var)) 
   }
-  # if (OLStrick == TRUE){ # do OLStrick before first iteration
-  #   parlist <- OLStrick_function(parlist = parlist, hidden_layers = hlayers, y = y
-  #                                , fe_var = fe_var, lam = lam, parapen = parapen
-  #                                , penalize_toplayer, nlayers = nlayers)
-  # }
   #####################################
   #start setup
   #get starting mse
@@ -344,6 +340,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       grads_p <- calc_grads(plist = plist, hlay = hlbatch, Xd = Xd, y = y[curBat]
         , yhat = yhat, droplist = droplist, nlayers = nlayers, activ_prime = activ_prime)
       grads <- reconstitute(grads_p, droplist, parlist, nlayers) # put zeros back in after dropout...
+      # grads <- grads_p
       # Calculate updates to parameters based on gradients and learning rates
       if (RMSprop == TRUE){
         newG2 <- rapply(grads, function(x){.1*x^2}, how = "list")
