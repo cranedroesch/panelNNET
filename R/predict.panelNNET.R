@@ -5,12 +5,12 @@
 predict.panelNNET <-
 function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
          , numerical_jacobian = FALSE, parallel_jacobian = FALSE, convolutional = NULL){
-obj = pnn
-newX = as.matrix(Xtest)
-new.param = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],])
-fe.newX = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]]
-convolutional = NULL
-y_test <- NULL
+# obj = pnn
+# newX = as.matrix(Xtest)
+# new.param = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],])
+# fe.newX = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]]
+# convolutional = NULL
+# y_test <- NULL
   if (obj$activation == 'tanh'){
     activ <- tanh
   }
