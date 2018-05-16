@@ -7,13 +7,6 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
   # lam <- pnn$lam
   # parapen <- pnn$parapen
   # hidden_layers <- hlayers
-  const <- parlist$beta_param*parapen
-  if (penalize_toplayer == TRUE){
-    for (i in 1:(length(parlist)-1)){
-      const <- c(const, parlist[[i]]$beta)
-    }
-  }
-  constraint <- sum(const^2)
   Zdm <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
     hidden_layers[[i]][[length(hidden_layers[[i]])]]
   }
@@ -24,27 +17,39 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
   }  else {
     targ <- y
   }   
-  #set up the penalty vector
-  D <- rep(1, ncol(Zdm))
-  D[1:length(parapen)] <- D[1:length(parapen)]*parapen #incorporate parapen into diagonal of covmat
-  if (penalize_toplayer == FALSE){
-    D <- D*0
-  }
-  if (is.null(fe_var)){
-    D[1] <- 0
-  }
-  # find implicit lambda
-  b <- c(unlist(parlist)[grepl("beta", names(unlist(parlist)))])
-  b <- c(b[grepl("param", names(b))], b[!grepl("param", names(b))])
-  if (constraint >0){
+  if (lam >0){
+    const <- parlist$beta_param*parapen
+    if (penalize_toplayer == TRUE){
+      for (i in 1:(length(parlist)-1)){
+        const <- c(const, parlist[[i]]$beta)
+      }
+    }
+    constraint <- sum(const^2)
+    #set up the penalty vector
+    D <- rep(1, ncol(Zdm))
+    D[1:length(parapen)] <- D[1:length(parapen)]*parapen #incorporate parapen into diagonal of covmat
+    if (penalize_toplayer == FALSE){
+      D <- D*0
+    }
+    if (is.null(fe_var)){
+      D[1] <- 0
+    }
     # scale the data
-    sZdm <- colScale(Zdm)
     starg <- scale(targ)
+    sZdm <- colScale(Zdm)
+    #deal with cases that don't vary, typically with parametric intercepts
+    nancols <- apply(sZdm, 2, function(x){all(is.nan(x))})
+    if (any(nancols)){
+      sZdm[,nancols] <- 1
+    }
+    # matmult   
     Zty <- MatMult(t(sZdm), starg)
     ZtZ <- MatMult(t(sZdm), sZdm)
+    scalefac <- attr(starg, "scaled:scale")/attr(sZdm, "scaled:scale")
+    scalefac[scalefac == Inf] <- 1
     f <- function(L){
       bi <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(L)), Zty)), error = function(e){b})
-      bi <- bi*attr(starg, "scaled:scale")/attr(sZdm, "scaled:scale")
+      bi <- bi*scalefac
       (crossprod(bi*D) - constraint)^2
     }
     # f <- function(L){

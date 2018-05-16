@@ -20,27 +20,28 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # library(dplyr)
 # library(randomForest)
 # library(splines)
+# set.seed(69)
 # N <- 1000
 # u <- rnorm(N)
 # x <- runif(N, 0, 20) %>% sort
 # y <- 3*sin(x) + u
 # plot(x, y)
 # X <- matrix(x)
-# hidden_units <- c(5, 3)
+# hidden_units <- c(20,20,20)
 # fe_var = NULL
 # maxit = 1000
 # lam = 0
 # time_var = NULL
 # param = NULL
-# verbose = T
+# verbose = F
 # report_interval = 1
 # gravity = 1.01
 # convtol = 1e-3
 # activation = 'lrelu'
 # start_LR = .001
 # parlist = NULL
-# OLStrick = F
-# OLStrick_interval = 25
+# OLStrick = T
+# OLStrick_interval = 1
 # batchsize = N
 # maxstopcounter = 25
 # LR_slowing_rate = 2
@@ -188,14 +189,15 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   }
   parlist <- as.relistable(parlist)
   #if there are no FE's, append a 0 to the front of the parapen vec, to leave the intercept unpenalized
-  if (!is.null(param)){
-    if(is.null(fe_var) & !is.null(param)){
-      parapen <- c(0, parapen)
-    }
-    if(is.null(fe_var) & is.null(param)){
-      parapen <- 0
-    }
-  } else {parapen <- 1}
+  if (is.null(param) & is.null(fe_var)){
+    parapen <- 0
+  }
+  if (is.null(param) % !is.null(fe_var)){
+    parapen <- NULL
+  }
+  if (!is.null(param) % is.null(fe_var)){
+    parapen <- c(0, parapen)
+  } # if both are not null, then the parapen is the parapen
   #compute hidden layers given parlist
   hlayers <- calc_hlayers(parlist, X = X, param = param, 
                           fe_var = fe_var, nlayers = nlayers, 
@@ -253,11 +255,11 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   LRvec <- LR <- start_LR# starting step size
   #Calculate gradients
   grads <- calc_grads(parlist, hlayers, X, y, yhat, droplist = NULL, nlayers, activ_prime = activ_prime)
-  # check gradients
+  # # check gradients
   # eps <- 1e-5
   # l <- function(pl){
-  #   hl <- calc_hlayers(pl, X = X, param = param, 
-  #                           fe_var = fe_var, nlayers = nlayers, 
+  #   hl <- calc_hlayers(pl, X = X, param = param,
+  #                           fe_var = fe_var, nlayers = nlayers,
   #                           convolutional = convolutional, activation = activation)
   #   yh <- as.numeric(getYhat(pl, hl, param, y, ydm, fe_var, nlayers))
   #   MSE <- mean((y-yh)^2)
@@ -280,7 +282,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   #   print(paste0("computed: ", gsim))
   #   print(paste0("difference: ", comp - gsim))
   #   print(paste0("ratio: ", comp/gsim))
-  #   
+  # 
   # }
   # gcheck(1)
 
@@ -340,7 +342,8 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       # Calculate gradients for minibatch
       grads_p <- calc_grads(plist = plist, hlay = hlbatch, Xd = Xd, y = y[curBat]
         , yhat = yhat, droplist = droplist, nlayers = nlayers, activ_prime = activ_prime)
-      grads <- reconstitute(grads_p, droplist, parlist, nlayers) # put zeros back in after dropout...
+      # grads <- reconstitute(grads_p, droplist, parlist, nlayers) # put zeros back in after dropout...
+      grads <- grads_p
       # Calculate updates to parameters based on gradients and learning rates
       if (RMSprop == TRUE){
         newG2 <- rapply(grads, function(x){.1*x^2}, how = "list")
@@ -382,6 +385,8 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       }
       #update yhat for purpose of computing loss function
       yhat <- getYhat(parlist, hlay = hlayers, param, y, ydm, fe_var, nlayers) # update yhat for purpose of computing gradients
+      plot(x, y)
+      lines(x, yhat, col = "red")
       mse <- mseold <- mean((y-yhat)^2)
       B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
       lowerpar <- foreach(i = 1:length(nlayers), .combine = c) %do% {unlist(parlist[[i]][1:nlayers[i]])}
