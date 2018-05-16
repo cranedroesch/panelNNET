@@ -5,16 +5,12 @@
 predict.panelNNET <-
 function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
          , numerical_jacobian = FALSE, parallel_jacobian = FALSE, convolutional = NULL){
-# obj = pnn
-#   newX = as.matrix(Xtest)
-#   new.param = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],])
-#   fe.newX = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]]
-  # obj = pr_obj
-  # y_test = stop_early$y_test
-  # newX = stop_early$X_test
-  # fe.newX = stop_early$fe_test
-  # new.param = stop_early$P_test
-# convolutional = NULL
+obj = pnn
+newX = as.matrix(Xtest)
+new.param = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],])
+fe.newX = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]]
+convolutional = NULL
+y_test <- NULL
   if (obj$activation == 'tanh'){
     activ <- tanh
   }
@@ -146,7 +142,7 @@ predfun_multinet <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param 
   if (obj$activation == 'lrelu'){
     activ <- lrelu
   }
-  nlayers <- sapply(obj$hidden_layers, length)
+  nlayers <- foreach(i = 1:(length(obj$parlist)-1), .combine = c) %do% {length(obj$hidden_layers[[i]])}
   # rescale new data to scale of training data
   D <- foreach(i = 1:length(obj$X)) %do% {
     sweep(sweep(newX[[i]], 2, STATS = attr(obj$X[[i]], "scaled:center"), FUN = '-'), 2, STATS = attr(obj$X[[i]], "scaled:scale"), FUN = '/')
