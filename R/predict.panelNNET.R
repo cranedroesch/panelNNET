@@ -5,12 +5,12 @@
 predict.panelNNET <-
 function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
          , numerical_jacobian = FALSE, parallel_jacobian = FALSE, convolutional = NULL){
-# obj = pnn
-# newX = as.matrix(Xtest)
-# new.param = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],])
-# fe.newX = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]]
+# obj = pr_obj
+# newX = stop_early$X_test
+# new.param = NULL
+# fe.newX = NULL
 # convolutional = NULL
-# y_test <- NULL
+# y_test <- stop_early$y_test
   if (obj$activation == 'tanh'){
     activ <- tanh
   }
@@ -156,6 +156,9 @@ predfun_multinet <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param 
                STATS = attr(obj$param, "scaled:scale"), 
                FUN = '/')
   } else {P <- NULL}
+  if (is.null(FEs_to_merge)){# add intercept when needed
+    P <- matrix(rep(1, nrow(D[[1]])))
+  }
   # compute hidden layers
   HL <- calc_hlayers(parlist = obj$parlist, 
                      X = D, 

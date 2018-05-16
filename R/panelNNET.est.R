@@ -25,9 +25,12 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # u <- rnorm(N)
 # x <- runif(N, 0, 20) %>% sort
 # y <- 3*sin(x) + u
+# ut <- rnorm(N)
+# xt <- runif(N, 0, 20) %>% sort
+# yt <- 3*sin(xt) + ut
 # plot(x, y)
 # X <- matrix(x)
-# hidden_units <- 10:3
+# hidden_units <- 40:30
 # fe_var = NULL
 # maxit = 1000
 # lam = 0.000001
@@ -42,25 +45,25 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # parlist = NULL
 # OLStrick = T
 # OLStrick_interval = 1
-# batchsize = N
+# batchsize = N/20
 # maxstopcounter = 25
 # LR_slowing_rate = 2
 # parapen = NULL
 # return_best = TRUE
 # RMSprop = T
-# # stop_early = list(check_every = 20,
-# #                   max_ES_stopcounter = 5,
-# #                   y_test = dat$yield[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]],
-# #                   X_test = as.matrix(Xtest),
-# #                   P_test = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],]),
-# #                   fe_test = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]])
+# stop_early = list(check_every = 1,
+#                   max_ES_stopcounter = 1e6,
+#                   y_test = y,
+#                   X_test = as.matrix(x),
+#                   P_test = NULL,
+#                   fe_test =NULL)
 # convolutional = NULL
 # penalize_toplayer = TRUE
 # RMSprop = TRUE
 # initialization = 'HZRS'
 # dropout_hidden <- dropout_input <- 1
-# # dropout_hidden <- .9
-# # dropout_input <- .99
+# dropout_hidden <- .9
+# dropout_input <- .99
 # stop_early = NULL
 
   # y = dat$yield[bsamp]
@@ -271,6 +274,9 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                                  newX = stop_early$X_test, 
                                  fe.newX = stop_early$fe_test, 
                                  new.param = stop_early$P_test)
+    lines(x, yhat, col = "red")
+    lines(x, pr_test, col = "blue")
+    
     best_mse <- mse_test_vec <- mse_test <- msetest_old <- mean((stop_early$y_test-pr_test)^2)
   } else {mse_test <- best_mse <- NULL}
   # in-sample MSE and loss
@@ -413,6 +419,8 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       }
       #update yhat for purpose of computing loss function
       yhat <- getYhat(parlist, hlay = hlayers, param, y, ydm, fe_var, nlayers) # update yhat for purpose of computing gradients
+      plot(x, y)
+      lines(x, yhat, col = "red")
       mse <- mseold <- mean((y-yhat)^2)
       B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
       lowerpar <- foreach(i = 1:length(nlayers), .combine = c) %do% {unlist(parlist[[i]][1:nlayers[i]])}
@@ -487,6 +495,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                                        newX = stop_early$X_test, 
                                        fe.newX = stop_early$fe_test, 
                                        new.param = stop_early$P_test)
+          lines(x, pr_test, col = "blue")
           mse_test <- mean((stop_early$y_test-pr_test)^2)
           mse_test_vec <- append(mse_test_vec, mse_test)
           if (mse_test == min(mse_test_vec)){
