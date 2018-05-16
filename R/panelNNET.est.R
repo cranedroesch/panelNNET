@@ -27,10 +27,10 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # y <- 3*sin(x) + u
 # plot(x, y)
 # X <- matrix(x)
-# hidden_units <- c(20,20,20)
+# hidden_units <- c(5:2)+10
 # fe_var = NULL
 # maxit = 1000
-# lam = 0
+# lam = 0.1
 # time_var = NULL
 # param = NULL
 # verbose = F

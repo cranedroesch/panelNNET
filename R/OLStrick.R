@@ -52,15 +52,11 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
       bi <- bi*scalefac
       (crossprod(bi*D) - constraint)^2
     }
-    # f <- function(L){
-    #   bi <- as.numeric(as.matrix(coef(glmnet(Zdm, targ, lambda = L, intercept = F, standardize = T, alpha = 0, penalty.factor = D))))[-1]
-    #   (crossprod(bi*D) - constraint)^2
-    # }
     o <- optim(par = lam, f = f, method = 'Brent', lower = lam, upper = 1e9)
     newlam2 <- o$par
     #New top-level params
     b <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(newlam2)), Zty)), error = function(e){b})
-    b <- b*attr(starg, "scaled:scale")/attr(sZdm, "scaled:scale")
+    b <- b*scalefac
     # b <- as.numeric(coef(glmnet(Zdm, targ, lambda = newlam2, standardize = T, intercept = F, alpha = 0, penalty.factor = D)))[-1]
   } else {
     Zty <- MatMult(t(Zdm), targ)
