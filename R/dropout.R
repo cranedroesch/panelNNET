@@ -59,14 +59,13 @@ drop_data <- function(hlayers, droplist, X){
   }
 }
 
-# reconstitute full gradient
-# this function won't work for non-multinets, until multinet is generalized to work for lists of length 1
-reconstitute <- function(dropped, droplist, full, nlayers){
+# reconstitute full gradient after doing dropout
+reconstitute <- function(dropped, droplist, full_old_parlist, nlayers){
   if (!is.null(droplist)){
-    if (!is.null(full$beta_param)){
-      BP <- full$beta_param      
-    }
-    emptygrads <- recursive_mult(full, 0)
+    # if (!is.null(full_old_parlist$beta_param)){
+    #   BP <- full_old_parlist$beta_param      
+    # }
+    emptygrads <- recursive_mult(full_old_parlist, 0)
     for (j in 1:length(nlayers)){
       if (nlayers[[j]] > 1){
         emptygrads[[j]][[1]][c(TRUE,droplist[[j]][[1]]),droplist[[j]][[2]]] <- dropped[[j]][[1]]
@@ -79,14 +78,14 @@ reconstitute <- function(dropped, droplist, full, nlayers){
       }
       #top-level
       emptygrads[[j]]$beta <- NULL
-      emptygrads[[j]][[nlayers[[j]] + 1]] <- matrix(rep(0, length(full[[j]]$beta))) #empty
+      emptygrads[[j]][[nlayers[[j]] + 1]] <- matrix(rep(0, length(full_old_parlist[[j]]$beta))) #empty
       emptygrads[[j]][[nlayers[[j]] + 1]][droplist[[j]][[nlayers[[j]]+1]]] <- dropped[[j]][[nlayers[[j]] + 1]]
     }
-    if (!is.null(full$beta_param)){
-      emptygrads$beta_param <- BP # return beta param
+    if (length(emptygrads)>length(nlayers)){ # this will happen when there is a beta_param term
+      emptygrads$beta_param <- dropped[[length(dropped)]]
     }
     return(emptygrads)
-  } else {return(full)} 
+  } else {return(dropped)} 
 }
 
 

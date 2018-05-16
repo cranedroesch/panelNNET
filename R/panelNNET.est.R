@@ -27,10 +27,10 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # y <- 3*sin(x) + u
 # plot(x, y)
 # X <- matrix(x)
-# hidden_units <- c(5:2)+10
+# hidden_units <- c(8, 4)
 # fe_var = NULL
 # maxit = 1000
-# lam = 0.1
+# lam = 0.0001
 # time_var = NULL
 # param = NULL
 # verbose = F
@@ -41,7 +41,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # start_LR = .001
 # parlist = NULL
 # OLStrick = T
-# OLStrick_interval = 1
+# OLStrick_interval = 25
 # batchsize = N
 # maxstopcounter = 25
 # LR_slowing_rate = 2
@@ -58,7 +58,9 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # penalize_toplayer = TRUE
 # RMSprop = TRUE
 # initialization = 'HZRS'
-# dropout_hidden <- dropout_input <- 1
+# # dropout_hidden <- dropout_input <- 1
+# dropout_hidden <- .5
+# dropout_input <- .8
 # stop_early = NULL
 
 
@@ -342,8 +344,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       # Calculate gradients for minibatch
       grads_p <- calc_grads(plist = plist, hlay = hlbatch, Xd = Xd, y = y[curBat]
         , yhat = yhat, droplist = droplist, nlayers = nlayers, activ_prime = activ_prime)
-      # grads <- reconstitute(grads_p, droplist, parlist, nlayers) # put zeros back in after dropout...
-      grads <- grads_p
+      grads <- reconstitute(grads_p, droplist, parlist, nlayers) # put zeros back in after dropout...
       # Calculate updates to parameters based on gradients and learning rates
       if (RMSprop == TRUE){
         newG2 <- rapply(grads, function(x){.1*x^2}, how = "list")
