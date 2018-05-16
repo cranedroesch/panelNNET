@@ -20,11 +20,9 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # library(dplyr)
 # library(randomForest)
 # library(splines)
-
-
 # N <- 1000
 # u <- rnorm(N)
-# x <- runif(N, 0, 20)
+# x <- runif(N, 0, 20) %>% sort
 # y <- 3*sin(x) + u
 # plot(x, y)
 # X <- matrix(x)
