@@ -63,6 +63,37 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # # dropout_input <- .99
 # stop_early = NULL
 
+  # y = dat$yield[bsamp]
+  # X = Xpc
+  # hidden_units = arch
+  # fe_var = dat$fips[bsamp]
+  # maxit = 200
+  # lam = metapar$lam[i]
+  # time_var = dat$year[bsamp]
+  # param = Xp[bsamp,]
+  # verbose = T
+  # report_interval = 1
+  # gravity = metapar$gravity[i]
+  # convtol = 1e-3
+  # activation = 'lrelu'
+  # start_LR = metapar$start_LR[i]
+  # parlist = bestparlist
+  # OLStrick = TRUE
+  # OLStrick_interval = 20
+  # batchsize = metapar$batchsize[i]
+  # maxstopcounter = 25
+  # LR_slowing_rate = metapar$LRSR[i]
+  # parapen = c(0,0,rep(metapar$pp[i], ncol(Xp)-2))
+  # dropout_hidden = metapar$drop[i]
+  # dropout_input = metapar$drop[i]^.321
+  # return_best = TRUE
+  # stop_early = list(check_every = 20,
+  #                   max_ES_stopcounter = 5,
+  #                   y_test = dat$yield[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]],
+  #                   X_test = as.matrix(Xtest),
+  #                   P_test = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],]),
+  #                   fe_test = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]])
+  
 
   ##########
   #Define internal functions

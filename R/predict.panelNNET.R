@@ -170,7 +170,8 @@ predfun_multinet <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param 
     return(D)
   }
   B <- foreach(i = 1:length(nlayers), .combine = c) %do% {obj$parlist[[i]]$beta}
-  xpart <- MatMult(D, B)
+  B <- c(obj$parlist$beta_param, B)
+  xpart <- MatMult(cbind(P, D), B)
   if (is.null(obj$fe)){
     yhat <- xpart
   } else {
