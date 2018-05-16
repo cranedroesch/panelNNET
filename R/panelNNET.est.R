@@ -274,9 +274,6 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                                  newX = stop_early$X_test, 
                                  fe.newX = stop_early$fe_test, 
                                  new.param = stop_early$P_test)
-    lines(x, yhat, col = "red")
-    lines(x, pr_test, col = "blue")
-    
     best_mse <- mse_test_vec <- mse_test <- msetest_old <- mean((stop_early$y_test-pr_test)^2)
   } else {mse_test <- best_mse <- NULL}
   # in-sample MSE and loss
@@ -419,8 +416,8 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       }
       #update yhat for purpose of computing loss function
       yhat <- getYhat(parlist, hlay = hlayers, param, y, ydm, fe_var, nlayers) # update yhat for purpose of computing gradients
-      plot(x, y)
-      lines(x, yhat, col = "red")
+      # plot(x, y)
+      # lines(x, yhat, col = "red")
       mse <- mseold <- mean((y-yhat)^2)
       B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
       lowerpar <- foreach(i = 1:length(nlayers), .combine = c) %do% {unlist(parlist[[i]][1:nlayers[i]])}
