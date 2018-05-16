@@ -492,7 +492,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                                        newX = stop_early$X_test, 
                                        fe.newX = stop_early$fe_test, 
                                        new.param = stop_early$P_test)
-          lines(x, pr_test, col = "blue")
+          # lines(x, pr_test, col = "blue")
           mse_test <- mean((stop_early$y_test-pr_test)^2)
           mse_test_vec <- append(mse_test_vec, mse_test)
           if (mse_test == min(mse_test_vec)){
