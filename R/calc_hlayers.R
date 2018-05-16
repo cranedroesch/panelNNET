@@ -29,7 +29,7 @@ calc_hlayers <- function(parlist, X = X, param = param, fe_var = fe_var, nlayers
     colnames(hlayers$param) <- paste0('param',1:ncol(param))
   }
   if (is.null(fe_var)){#add intercept if no FEs
-    hlayers$param <- cbind(1, hlayers$param)
+    hlayers$param <- cbind(rep(1, nrow(hlayers[[1]][[1]])), hlayers$param)
   }
   return(hlayers)
 }

@@ -20,109 +20,49 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # library(dplyr)
 # library(randomForest)
 # library(splines)
-# 
-# AWS <- grepl('ubuntu', getwd())
-# desktop <- grepl(':', getwd())
-# laptop <- grepl('/home/andrew', getwd())
-# if(AWS){
-#   setwd("/home/ubuntu/projdir")
-#   outdir <- "/home/ubuntu/projdir/outdir"
-#   registerDoParallel(detectCores())
-# }
-# if(desktop){
-# }
-# if(laptop){
-#   setwd("/home/andrew/Dropbox/USDA/ARC/data")
-#   outdir <- "/home/andrew/Dropbox/USDA/ARC/output"
-#   registerDoParallel(detectCores())
-# }
-# # dat <- readRDS("panel_corn.Rds")
-# # dat <- subset(dat, state %in% c("17", "19"))
-# # saveRDS(dat, "testdat.Rds")
-# dat <- readRDS("testdat.Rds")
-# X1 <- dat[,paste0("maxat_jday_", 200:215)]
-# X2 <- dat[,paste0("precip_jday_", 200:215)]
-# dat$y <- dat$year - min(dat$year) + 1
-# dat$y2 <- dat$y^2
-# Xp <- dat[,c("y", "y2")]
-# Xp <- Xp[sapply(Xp, sd) > 0]
-# 
-# is <- dat$year%%2==1 & dat$state == "17"
-# oos <- is == F
-# y = dat$yield[is]
-# X = list(X1[is,], X2[is,])
-# hidden_units = list(c(10, 2), c(8, 4))
-# fe_var = dat$fips[is]
-# maxit = 10000
+
+
+# N <- 1000
+# u <- rnorm(N)
+# x <- runif(N, 0, 20)
+# y <- 3*sin(x) + u
+# plot(x, y)
+# X <- matrix(x)
+# hidden_units <- c(5, 3)
+# fe_var = NULL
+# maxit = 1000
 # lam = 0
-# time_var = dat$year[is]
-# param = Xp[is,]
+# time_var = NULL
+# param = NULL
 # verbose = T
 # report_interval = 1
 # gravity = 1.01
 # convtol = 1e-3
 # activation = 'lrelu'
-# start_LR = .00001
+# start_LR = .001
 # parlist = NULL
 # OLStrick = F
 # OLStrick_interval = 25
-# batchsize = 256
-# maxstopcounter = 2500
+# batchsize = N
+# maxstopcounter = 25
 # LR_slowing_rate = 2
-# parapen = c(0,0)
-# penalize_toplayer = FALSE
+# parapen = NULL
 # return_best = TRUE
-# 
 # RMSprop = T
-# batchsize = 48
-# initialization = "HZRS"
-# dropout_hidden <- 1
-# dropout_input <- 1
-# convolutional <- NULL
-# 
-# stop_early = list(check_every = 20,
-#                   max_ES_stopcounter = 50,
-#                   y_test = dat$yield[oos],
-#                   X_test = list(X1[oos,], X2[oos,]),
-#                   P_test = as.matrix(Xp[oos,]),
-#                   fe_test = dat$fips[oos])
-# # stop_early <- NULL
+# # stop_early = list(check_every = 20,
+# #                   max_ES_stopcounter = 5,
+# #                   y_test = dat$yield[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]],
+# #                   X_test = as.matrix(Xtest),
+# #                   P_test = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],]),
+# #                   fe_test = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]])
+# convolutional = NULL
+# penalize_toplayer = TRUE
+# RMSprop = TRUE
+# initialization = 'HZRS'
+# dropout_hidden <- dropout_input <- 1
+# stop_early = NULL
 
-  # y = dat$yield[bsamp]
-  # X = Xpc
-  # hidden_units = rep(100, 10)
-  # fe_var = dat$fips[bsamp]
-  # maxit = 1000
-  # lam = .001
-  # time_var = dat$year[bsamp]
-  # param = Xp[bsamp,]
-  # verbose = T
-  # report_interval = 1
-  # gravity = 1.01
-  # convtol = 1e-3
-  # activation = 'lrelu'
-  # start_LR = .001
-  # parlist = NULL
-  # OLStrick = F
-  # OLStrick_interval = 25
-  # batchsize = 256
-  # maxstopcounter = 25
-  # LR_slowing_rate = 2
-  # parapen = c(0,0,rep(1, ncol(Xp)-2))
-  # return_best = TRUE
-  # RMSprop = T
-  # stop_early = list(check_every = 20,
-  #                   max_ES_stopcounter = 5,
-  #                   y_test = dat$yield[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]],
-  #                   X_test = as.matrix(Xtest),
-  #                   P_test = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],]),
-  #                   fe_test = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]])
-  # convolutional = NULL
-  # penalize_toplayer = TRUE
-  # RMSprop = TRUE
-  # initialization = 'HZRS'
-  # dropout_hidden <- dropout_input <- 1
-  # stop_early = NULL
+
   ##########
   #Define internal functions
   recursive_RMSprop <- function(x, y) tryCatch(LR/sqrt(x+1e-10) * y, error = function(e) Map(recursive_RMSprop, x, y))
