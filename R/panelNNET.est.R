@@ -192,10 +192,10 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   if (is.null(param) & is.null(fe_var)){
     parapen <- 0
   }
-  if (is.null(param) % !is.null(fe_var)){
+  if (is.null(param) & !is.null(fe_var)){
     parapen <- NULL
   }
-  if (!is.null(param) % is.null(fe_var)){
+  if (!is.null(param) & is.null(fe_var)){
     parapen <- c(0, parapen)
   } # if both are not null, then the parapen is the parapen
   #compute hidden layers given parlist
