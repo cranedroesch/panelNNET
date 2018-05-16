@@ -27,10 +27,10 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # y <- 3*sin(x) + u
 # plot(x, y)
 # X <- matrix(x)
-# hidden_units <- c(8, 4)
+# hidden_units <- c(8:4)
 # fe_var = NULL
 # maxit = 1000
-# lam = 0.0001
+# lam = 0
 # time_var = NULL
 # param = NULL
 # verbose = F
@@ -40,7 +40,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # activation = 'lrelu'
 # start_LR = .001
 # parlist = NULL
-# OLStrick = T
+# OLStrick = F
 # OLStrick_interval = 25
 # batchsize = N
 # maxstopcounter = 25
@@ -58,11 +58,10 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # penalize_toplayer = TRUE
 # RMSprop = TRUE
 # initialization = 'HZRS'
-# # dropout_hidden <- dropout_input <- 1
+# dropout_hidden <- dropout_input <- 1
 # dropout_hidden <- .5
 # dropout_input <- .8
 # stop_early = NULL
-
 
   ##########
   #Define internal functions

@@ -49,7 +49,6 @@ drop_parlist <- function(parlist, droplist, nlayers){
 }
 
 # subset hidden layers and data
-# this function won't work for non-multinets, until multinet is generalized to work for lists of length 1
 drop_data <- function(hlayers, droplist, X){
   foreach(i = 1:length(droplist)) %do% {
     foreach(j = 1:length(droplist[[i]])) %do% {
@@ -61,6 +60,8 @@ drop_data <- function(hlayers, droplist, X){
 
 # reconstitute full gradient after doing dropout
 reconstitute <- function(dropped, droplist, full_old_parlist, nlayers){
+# dropped <- grads_p
+# full_old_parlist <- parlist
   if (!is.null(droplist)){
     # if (!is.null(full_old_parlist$beta_param)){
     #   BP <- full_old_parlist$beta_param      
@@ -69,7 +70,7 @@ reconstitute <- function(dropped, droplist, full_old_parlist, nlayers){
     for (j in 1:length(nlayers)){
       if (nlayers[[j]] > 1){
         emptygrads[[j]][[1]][c(TRUE,droplist[[j]][[1]]),droplist[[j]][[2]]] <- dropped[[j]][[1]]
-        for (i in 2:(nlayers[[j]]-1)){
+        for (i in 2:(nlayers[[j]])){
           emptygrads[[j]][[i]][c(TRUE, droplist[[j]][[i]]), droplist[[j]][[i+1]]] <- dropped[[j]][[i]]
         }
       } else { #for one-layer networks
