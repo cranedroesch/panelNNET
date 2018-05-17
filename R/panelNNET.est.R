@@ -74,10 +74,10 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # # architecture
 # arch <- c(10, 5)
 # PC <- tryCatch(readRDS(file = paste0(outdir, "/PCA_v13_", g,".Rds")), error = function(e)e)
-# Xpc <- ppc(X[bsamp,], PC, sum(cumsum((PC$sdev^2)/sum(PC$sdev^2))<.95))
-# Xtest <- ppc(X[dat$year %in% oosamp  & dat$fips %in% dat$fips[dat$year %in% samp],], PC, sum(cumsum((PC$sdev^2)/sum(PC$sdev^2))<.95))
-# saveRDS(Xpc, "tempX.Rds")
-# saveRDS(Xtest, "temptest.Rds")
+# # Xpc <- ppc(X[bsamp,], PC, sum(cumsum((PC$sdev^2)/sum(PC$sdev^2))<.95))
+# # Xtest <- ppc(X[dat$year %in% oosamp  & dat$fips %in% dat$fips[dat$year %in% samp],], PC, sum(cumsum((PC$sdev^2)/sum(PC$sdev^2))<.95))
+# # saveRDS(Xpc, "tempX.Rds")
+# # saveRDS(Xtest, "temptest.Rds")
 # Xpc <- readRDS("tempX.Rds")
 # Xtest <- readRDS("temptest.Rds")
 # y = dat$yield[bsamp]
@@ -113,16 +113,16 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # penalize_toplayer = TRUE
 # initialization = 'HZRS'
 # dropout_hidden <- dropout_input <- 1
-# dropout_hidden <- .9
-# dropout_input <- .99
-# stop_early = NULL
+# dropout_hidden <- .5
+# dropout_input <- .8
+# # stop_early = NULL
 
 # rm(list=ls())
 # gc()
 # gc()
 # "%ni%" <- Negate("%in%")
 # mse <- function(x, y){mean((x-y)^2)}
-# 
+#
 # library(devtools)
 # install_github("cranedroesch/panelNNET", ref = "multinet", force = F)
 # library(panelNNET)
@@ -178,37 +178,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # dropout_input <- .99
 # stop_early = NULL
 
-  # y = dat$yield[bsamp]
-  # X = Xpc
-  # hidden_units = arch
-  # fe_var = dat$fips[bsamp]
-  # maxit = 200
-  # lam = metapar$lam[i]
-  # time_var = dat$year[bsamp]
-  # param = Xp[bsamp,]
-  # verbose = T
-  # report_interval = 1
-  # gravity = metapar$gravity[i]
-  # convtol = 1e-3
-  # activation = 'lrelu'
-  # start_LR = metapar$start_LR[i]
-  # parlist = bestparlist
-  # OLStrick = TRUE
-  # OLStrick_interval = 20
-  # batchsize = metapar$batchsize[i]
-  # maxstopcounter = 25
-  # LR_slowing_rate = metapar$LRSR[i]
-  # parapen = c(0,0,rep(metapar$pp[i], ncol(Xp)-2))
-  # dropout_hidden = metapar$drop[i]
-  # dropout_input = metapar$drop[i]^.321
-  # return_best = TRUE
-  # stop_early = list(check_every = 20,
-  #                   max_ES_stopcounter = 5,
-  #                   y_test = dat$yield[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]],
-  #                   X_test = as.matrix(Xtest),
-  #                   P_test = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],]),
-  #                   fe_test = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]])
-  
+
 
   ##########
   #Define internal functions
@@ -225,6 +195,37 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     }
     NTV <- convMask[,colnames(convMask) %ni% convolutional$topology]
     return(Matrix(cbind(TV, NTV)))
+  }
+  
+  check_earlystop <- function(stop_early){ #function placed here so it can leach off of parent env.
+    if (is.null(fe_var)){
+      fe_output = NULL; 
+    } else {
+      # compute FE output
+      Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
+        hlayers[[i]][[length(hlayers[[i]])]]
+      }
+      Z <- cbind(param, as.matrix(Z))
+      Zdm <- demeanlist(as.matrix(Z), list(fe_var))
+      B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
+      fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(parlist$beta_param, B)))
+      fe_output <- data.frame(fe_var, fe)
+    }
+    pr_obj <- list(parlist = parlist,
+                   activation = activation,
+                   X = X,
+                   param = param,
+                   yhat = yhat,
+                   fe_var = unique(fe_var),
+                   fe = fe_output,
+                   convolutional = NULL,
+                   hidden_layers = hidden_units)
+    pr_test <- predict.panelNNET(obj = pr_obj, 
+                                 y_test = stop_early$y_test,
+                                 newX = stop_early$X_test, 
+                                 fe.newX = stop_early$fe_test, 
+                                 new.param = stop_early$P_test)
+    return(pr_test)
   }
   
   ###########################
@@ -360,33 +361,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   yhat <- as.numeric(getYhat(parlist, hlayers, param, y, ydm, fe_var, nlayers))
   # if using early stopping, initialize object for passing to predict function
   if (!is.null(stop_early)){
-    if (is.null(fe_var)){
-      fe_output = NULL; 
-    } else {
-      # compute FE output
-      Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
-        hlayers[[i]][[length(hlayers[[i]])]]
-      }
-      Z <- cbind(param, as.matrix(Z))
-      Zdm <- demeanlist(as.matrix(Z), list(fe_var))
-      B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
-      fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(parlist$beta_param, B)))
-      fe_output <- data.frame(fe_var, fe)
-    }
-    pr_obj <- list(parlist = parlist,
-                   activation = activation,
-                   X = X,
-                   param = param,
-                   yhat = yhat,
-                   fe_var = unique(fe_var),
-                   fe = fe_output,
-                   convolutional = NULL,
-                   hidden_layers = hidden_units)
-    pr_test <- predict.panelNNET(obj = pr_obj, 
-                                 y_test = stop_early$y_test,
-                                 newX = stop_early$X_test, 
-                                 fe.newX = stop_early$fe_test, 
-                                 new.param = stop_early$P_test)
+    pr_test <- check_earlystop(stop_early)
     best_mse <- mse_test_vec <- mse_test <- msetest_old <- mean((stop_early$y_test-pr_test)^2)
   } else {mse_test <- best_mse <- NULL}
   # in-sample MSE and loss
@@ -467,16 +442,16 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       hlbatch <- calc_hlayers(plist, X = Xd,
                               param = param[curBat,], fe_var = fe_var[curBat], 
                               nlayers = nlayers, convolutional = convolutional, activ = activation)
-      # update hidden layers based on batch
-      for (p in 1:length(nlayers)){
-        for (h in 1:nlayers[p]){
-          if (is.null(droplist)){
-            hlayers[[p]][[h]][curBat,] <- hlbatch[[p]][[h]]
-          } else {
-            hlayers[[p]][[h]][curBat,droplist[[p]][[h+1]]] <- hlbatch[[p]][[h]]
-          }
-        }                  
-      }
+      # # update hidden layers based on batch
+      # for (p in 1:length(nlayers)){
+      #   for (h in 1:nlayers[p]){
+      #     if (is.null(droplist)){
+      #       hlayers[[p]][[h]][curBat,] <- hlbatch[[p]][[h]]
+      #     } else {
+      #       hlayers[[p]][[h]][curBat,droplist[[p]][[h+1]]] <- hlbatch[[p]][[h]]
+      #     }
+      #   }                  
+      # }
       #Getyhat from that
       yhat <- getYhat(plist, hlay = hlbatch, param[curBat,], y[curBat], ydm[curBat], fe_var[curBat], nlayers) # update yhat for purpose of computing gradients
       # before updating gradients, compute square of gradients for RMSprop
@@ -527,7 +502,9 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                                      , fe_var = fe_var, lam = lam, parapen = parapen
                                      , penalize_toplayer, nlayers = nlayers)
       }
-      #update yhat for purpose of computing loss function
+      #update yhat for purpose of computing loss function. need to update hidden layers in order to compute loss
+      hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var,
+                              nlayers = nlayers, convolutional = convolutional, activ = activation)
       yhat <- getYhat(parlist, hlay = hlayers, param, y, ydm, fe_var, nlayers) # update yhat for purpose of computing gradients
       # plot(x, y)
       # lines(x, yhat, col = "red")
@@ -571,42 +548,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       # check to see if early stopping is warranted
       if (!is.null(stop_early)){
         if (iter %% stop_early$check_every == 0 | iter == 0){
-          if (is.null(fe_var)){
-            fe_output <- NULL
-          } else {
-            # compute FE output
-            if(length(nlayers)>1){
-              Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
-                hlayers[[i]][[length(hlayers[[i]])]]
-              }
-              Z <- cbind(param, as.matrix(Z))
-              Zdm <- demeanlist(as.matrix(Z), list(fe_var))
-              B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
-              fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(parlist$beta_param, B)))
-            } else {
-              Zdm <- demeanlist(as.matrix(hlayers[[length(hlayers)]]), list(fe_var))
-              Zdm <- Matrix(Zdm)
-              fe <- (y-ydm) - MatMult(as.matrix(hlayers[[length(hlayers)]]-Zdm), as.matrix(c(
-                parlist$beta_param, parlist$beta
-              )))
-            }
-            fe_output <- data.frame(fe_var, fe)
-          }
-          pr_obj <- list(parlist = parlist,
-                         activation = activation,
-                         X = X,
-                         param = param,
-                         yhat = yhat,
-                         fe_var = unique(fe_var),
-                         fe = fe_output,
-                         convolutional = NULL,
-                         hidden_layers = hidden_units)
-          pr_test <- predict.panelNNET(obj = pr_obj, 
-                                       y_test = stop_early$y_test,
-                                       newX = stop_early$X_test, 
-                                       fe.newX = stop_early$fe_test, 
-                                       new.param = stop_early$P_test)
-          # lines(x, pr_test, col = "blue")
+          pr_test <- check_earlystop(stop_early)
           mse_test <- mean((stop_early$y_test-pr_test)^2)
           mse_test_vec <- append(mse_test_vec, mse_test)
           if (mse_test == min(mse_test_vec)){
