@@ -19,6 +19,118 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # library(glmnet)
 # library(dplyr)
 # library(randomForest)
+# 
+# AWS <- grepl('ubuntu', getwd())
+# desktop <- grepl(':', getwd())
+# laptop <- grepl('/home/andrew', getwd())
+# if(AWS){
+#   setwd("/home/ubuntu/projdir")
+#   system("mkdir /home/ubuntu/projdir/outdir")
+#   outdir <- "/home/ubuntu/projdir/outdir"
+#   registerDoParallel(detectCores())
+# }
+# if(desktop){
+# }
+# if(laptop){
+#   setwd("/home/andrew/Dropbox/USDA/ARC/data")
+#   outdir <- "/home/andrew/Dropbox/USDA/ARC/output"
+#   registerDoParallel(detectCores())
+# }
+# cr <- "corn"
+# irrdry <- "dry"
+# # load data
+# dat <- readRDS("testdat.Rds")
+# dat <- dat[dat$prop_irr < .5,]
+# 
+# # make TAP variable
+# dat$TAP <- rowSums(dat[,grepl('precip', colnames(dat))])/1000
+# dat$TAP2 <- dat$TAP^2
+# # nonparametric
+# X <- dat[,grepl('year|SR|soil_|precip|sdsfia|wind|minat|maxat|minrh|maxrh|lat|lon|prop_irr',colnames(dat))]
+# X <- X[sapply(X, sd) > 0]
+# dat$y <- dat$year - min(dat$year) + 1
+# dat$y2 <- dat$y^2
+# Xp <- cbind(dat[,c("y", "y2", "TAP", "TAP2")], dat[,grepl("SR", colnames(dat))])
+# Xp <- Xp[sapply(Xp, sd) > 0]
+# 
+# ppc <- function(x, PC, ncomp){
+#   x <- x %>% sweep(2, PC$center, "-")%>% sweep(2, PC$scale, "/")
+#   MatMult(as.matrix(x), PC$rotation[,1:ncomp])
+# }
+# 
+# get_arch <- function(g){
+#   set.seed(g, kind = "L'Ecuyer-CMRG")
+#   depth <- sample(1:15, 1)
+#   base <- sample(10:150, 1)
+#   slope <- runif(1, .1, 1)
+#   top <- ceiling(base*slope)
+#   floor(seq(from = base, to = top, length.out = depth))
+# }
+# g = 1
+# set.seed(g, kind = "L'Ecuyer-CMRG")
+# samp <- sample(unique(dat$year), replace = TRUE)
+# bsamp <- foreach(y = samp, .combine = c) %do% {which(dat$year == y)}
+# oosamp <- unique(dat$year)[unique(dat$year) %ni% samp]
+# # architecture
+# arch <- c(10, 5)
+# PC <- tryCatch(readRDS(file = paste0(outdir, "/PCA_v13_", g,".Rds")), error = function(e)e)
+# Xpc <- ppc(X[bsamp,], PC, sum(cumsum((PC$sdev^2)/sum(PC$sdev^2))<.95))
+# Xtest <- ppc(X[dat$year %in% oosamp  & dat$fips %in% dat$fips[dat$year %in% samp],], PC, sum(cumsum((PC$sdev^2)/sum(PC$sdev^2))<.95))
+# saveRDS(Xpc, "tempX.Rds")
+# saveRDS(Xtest, "temptest.Rds")
+# Xpc <- readRDS("tempX.Rds")
+# Xtest <- readRDS("temptest.Rds")
+# y = dat$yield[bsamp]
+# X = Xpc
+# hidden_units = arch
+# fe_var = dat$fips[bsamp]
+# maxit = 10
+# lam = .000001
+# time_var = dat$year[bsamp]
+# param = Xp[bsamp,]
+# verbose = T
+# report_interval = 1
+# gravity = 1.01
+# convtol = 1e-3
+# activation = 'lrelu'
+# start_LR = .001
+# parlist = NULL
+# OLStrick = T
+# OLStrick_interval = 25
+# batchsize = nrow(Xpc)
+# maxstopcounter = 25
+# LR_slowing_rate = 2
+# parapen = c(0,0,rep(1, ncol(Xp)-2))
+# return_best = TRUE
+# RMSprop = T
+# stop_early = list(check_every = 1,
+#                   max_ES_stopcounter = 1e5,
+#                   y_test = dat$yield[bsamp],
+#                   X_test = as.matrix(Xpc),
+#                   P_test = as.matrix(Xp[bsamp,]),
+#                   fe_test = dat$fips[bsamp])
+# convolutional = NULL
+# penalize_toplayer = TRUE
+# initialization = 'HZRS'
+# dropout_hidden <- dropout_input <- 1
+# dropout_hidden <- .9
+# dropout_input <- .99
+# stop_early = NULL
+
+# rm(list=ls())
+# gc()
+# gc()
+# "%ni%" <- Negate("%in%")
+# mse <- function(x, y){mean((x-y)^2)}
+# 
+# library(devtools)
+# install_github("cranedroesch/panelNNET", ref = "multinet", force = F)
+# library(panelNNET)
+# library(doParallel)
+# library(doBy)
+# library(glmnet)
+# library(dplyr)
+# library(randomForest)
 # library(splines)
 # set.seed(69)
 # N <- 1000
@@ -255,6 +367,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
         hlayers[[i]][[length(hlayers[[i]])]]
       }
+      Z <- cbind(param, as.matrix(Z))
       Zdm <- demeanlist(as.matrix(Z), list(fe_var))
       B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
       fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(parlist$beta_param, B)))

@@ -7,8 +7,8 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
          , numerical_jacobian = FALSE, parallel_jacobian = FALSE, convolutional = NULL){
 # obj = pr_obj
 # newX = stop_early$X_test
-# new.param = NULL
-# fe.newX = NULL
+# new.param = stop_early$P_test
+# fe.newX = stop_early$fe_test
 # convolutional = NULL
 # y_test <- stop_early$y_test
   if (obj$activation == 'tanh'){
@@ -37,7 +37,7 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
     pvec <- unlist(plist)
     #prepare fe's in advance...
     if (!is.null(obj$fe)){
-      # new version is faster but depends on doBy package:
+      # The purpose of this is to correct small numerical differences between different CSU fixed effects
       FEs_to_merge <- summaryBy(fe~fe_var, data = obj$fe, keep.names = T)
       # If there is a labeled outcome in the test set (i.e.: early stopping) compute FE's and append them
       if (any(unique(fe.newX) %ni% unique(obj$fe$fe_var)) & !is.null(y_test)){
@@ -178,7 +178,7 @@ predfun_multinet <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param 
   if (is.null(obj$fe)){
     yhat <- xpart
   } else {
-    nd <- data.frame(fe.newX, xpart = as.numeric(xpart), id = 1:length(fe.newX))       
+    nd <- data.frame(fe.newX, xpart = as.numeric(xpart), id = 1:length(fe.newX))
     nd <- merge(nd, FEs_to_merge, by.x = 'fe.newX', by.y = 'fe_var', all.x = TRUE, sort = FALSE)
     nd <- nd[order(nd$id),]
     yhat <- nd$fe + nd$xpart
