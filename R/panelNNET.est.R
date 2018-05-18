@@ -5,6 +5,9 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                           initialization, dropout_hidden, dropout_input, convolutional,
                           LR_slowing_rate, return_best, stop_early, ...){
 
+# #######################################
+# # bayesian hyperparameter search on PCs, doing the PCA train/test split appropriately
+# 
 # rm(list=ls())
 # gc()
 # gc()
@@ -20,165 +23,103 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # library(dplyr)
 # library(randomForest)
 # 
-# AWS <- grepl('ubuntu', getwd())
-# desktop <- grepl(':', getwd())
-# laptop <- grepl('/home/andrew', getwd())
-# if(AWS){
-#   setwd("/home/ubuntu/projdir")
-#   system("mkdir /home/ubuntu/projdir/outdir")
-#   outdir <- "/home/ubuntu/projdir/outdir"
-#   registerDoParallel(detectCores())
-# }
-# if(desktop){
-# }
-# if(laptop){
-#   setwd("/home/andrew/Dropbox/USDA/ARC/data")
-#   outdir <- "/home/andrew/Dropbox/USDA/ARC/output"
-#   registerDoParallel(detectCores())
-# }
-# cr <- "corn"
-# irrdry <- "dry"
+# setwd("N:/ARMS/ARMS Work Share/McFadden - Seeds")
+# 
+# # setup parallel backend
+# cl <- makeCluster(detectCores()) 
+# registerDoParallel(cl)
+# 
 # # load data
-# dat <- readRDS("testdat.Rds")
-# dat <- dat[dat$prop_irr < .5,]
+# dat <- readRDS("DTC_zipcode.Rds")
+# dat <- dat[,sapply(dat, sd)>0]
+# # designate variables as controls and instruments
+# # lat/lon are among the instruments only because of conditioning on spatial fixed effects.  
+# inst <- dat[,grep("_jday_|GDD|latitude|longitude|TAP", colnames(dat))]
+# # parametric instruments (potential)
+# parinst <- dat[,grep("_jul_|_aug_|jul12sev|jul11sev", colnames(dat))]
+# # nonparametric controls
+# cont <- dat[, colnames(dat) %ni% colnames(inst) &
+#               colnames(dat) %ni% colnames(parinst) &
+#               colnames(dat) %ni% c("poid", "vallwt0", "fips", "crd", "state", "lrr", "dtind", "dtcornac",
+#                                    "corngrainyield", "corngrainbu", "cornsilbu", "soybu", "dr_jul_13", 
+#                                    "dr_aug_13", "jul13sev", "yrsevdroughtjul","tmp_pcp_corr_july", "tmp_pcp_corr_aug",
+#                                    "pmdi_risk_july", "zip", "dtrat", "corngrainac")]
+# colnames(cont)
 # 
-# # make TAP variable
-# dat$TAP <- rowSums(dat[,grepl('precip', colnames(dat))])/1000
-# dat$TAP2 <- dat$TAP^2
-# # nonparametric
-# X <- dat[,grepl('year|SR|soil_|precip|sdsfia|wind|minat|maxat|minrh|maxrh|lat|lon|prop_irr',colnames(dat))]
-# X <- X[sapply(X, sd) > 0]
-# dat$y <- dat$year - min(dat$year) + 1
-# dat$y2 <- dat$y^2
-# Xp <- cbind(dat[,c("y", "y2", "TAP", "TAP2")], dat[,grepl("SR", colnames(dat))])
-# Xp <- Xp[sapply(Xp, sd) > 0]
+# #####################################
+# # sampling
 # 
-# ppc <- function(x, PC, ncomp){
-#   x <- x %>% sweep(2, PC$center, "-")%>% sweep(2, PC$scale, "/")
-#   MatMult(as.matrix(x), PC$rotation[,1:ncomp])
+# # function to first subsample from the whole population, and then bootstrap spatial clusters
+# sub_then_cluster <- function(lon, lat, K, rate, viz = FALSE){
+#   # subsample
+#   insamp <- sample(1:length(lat), length(lat)*rate, replace = FALSE)
+#   oosamp <- (1:length(lat))[(1:length(lat)) %ni% insamp]
+#   # kmeans
+#   coords <- cbind(lon[insamp], lat[insamp])
+#   km <- kmeans(coords, K)
+#   # bootstrapping
+#   bsamp <- sample(1:K, replace = TRUE)
+#   oobsamp <- (1:K)[1:K %ni% bsamp]
+#   if (viz == TRUE){
+#     plot(coords[km$cluster %in% bsamp, 1], coords[km$cluster %in% bsamp, 2], col = km$cluster[km$cluster %in% bsamp], pch = 19)
+#     points(lon[oosamp], lat[oosamp], pch = "x", cex = 1)  
+#     points(coords[km$cluster %in% oobsamp, 1], coords[km$cluster %in% oobsamp, 2], pch = 1)    
+#   }
+#   l <- length(lat)
+#   out <- data.frame(subsamp = 1:l %in% insamp)
+#   out$cluster <- NA
+#   out$cluster[out$subsamp == TRUE] <- km$cluster
+#   out$insamp <- (out$subsamp == TRUE & out$cluster %in% bsamp)
+#   frq <- table(bsamp) %>% t %>% t %>% as.data.frame
+#   frq <- frq[,-2]
+#   frq$bsamp <- as.numeric(as.character(frq$bsamp))
+#   out <- full_join(out, frq, by = c("cluster" = "bsamp"))
+#   out$Freq[is.na(out$Freq)] <- 0
+#   out$id <- 1:l
+#   out <- foreach(i = 1:l, .combine = rbind) %do% {
+#     d <- out[i,]
+#     if (d$Freq>0){
+#       foreach(j = 1:d$Freq, .combine = rbind) %do% {
+#         d
+#       }      
+#     }
+#   }
+#   return(data.frame(idx = out$id, cluster = out$cluster))
 # }
 # 
-# get_arch <- function(g){
-#   set.seed(g, kind = "L'Ecuyer-CMRG")
-#   depth <- sample(1:15, 1)
-#   base <- sample(10:150, 1)
-#   slope <- runif(1, .1, 1)
-#   top <- ceiling(base*slope)
-#   floor(seq(from = base, to = top, length.out = depth))
-# }
-# g = 1
-# set.seed(g, kind = "L'Ecuyer-CMRG")
-# samp <- sample(unique(dat$year), replace = TRUE)
-# bsamp <- foreach(y = samp, .combine = c) %do% {which(dat$year == y)}
-# oosamp <- unique(dat$year)[unique(dat$year) %ni% samp]
-# # architecture
-# arch <- c(10, 5)
-# PC <- tryCatch(readRDS(file = paste0(outdir, "/PCA_v13_", g,".Rds")), error = function(e)e)
-# # Xpc <- ppc(X[bsamp,], PC, sum(cumsum((PC$sdev^2)/sum(PC$sdev^2))<.95))
-# # Xtest <- ppc(X[dat$year %in% oosamp  & dat$fips %in% dat$fips[dat$year %in% samp],], PC, sum(cumsum((PC$sdev^2)/sum(PC$sdev^2))<.95))
-# # saveRDS(Xpc, "tempX.Rds")
-# # saveRDS(Xtest, "temptest.Rds")
-# Xpc <- readRDS("tempX.Rds")
-# Xtest <- readRDS("temptest.Rds")
-# y = dat$yield[bsamp]
-# X = Xpc
-# hidden_units = arch
-# fe_var = dat$fips[bsamp]
-# maxit = 10
-# lam = .000001
-# time_var = dat$year[bsamp]
-# param = Xp[bsamp,]
+# #############
+# # fit
+# 
+# set.seed(1, kind = "L'Ecuyer-CMRG")
+# samp <- sub_then_cluster(dat$longitude, dat$latitude, 50, .9, viz = FALSE)
+# 
+# y = dat$dtrat[samp$idx]
+# X = list(cont[samp$idx,], inst[samp$idx,])
+# hidden_units = list(c(10, 10), c(10, 10))
+# fe_var = samp$cluster
+# maxit = 1000
+# lam = 0
+# param = parinst[samp$idx,]
 # verbose = T
 # report_interval = 1
 # gravity = 1.01
 # convtol = 1e-3
 # activation = 'lrelu'
-# start_LR = .001
+# start_LR = .0001
 # parlist = NULL
-# OLStrick = T
+# OLStrick = TRUE
 # OLStrick_interval = 25
-# batchsize = nrow(Xpc)
-# maxstopcounter = 25
-# LR_slowing_rate = 2
-# parapen = c(0,0,rep(1, ncol(Xp)-2))
-# return_best = TRUE
-# RMSprop = T
-# stop_early = list(check_every = 1,
-#                   max_ES_stopcounter = 1e5,
-#                   y_test = dat$yield[bsamp],
-#                   X_test = as.matrix(Xpc),
-#                   P_test = as.matrix(Xp[bsamp,]),
-#                   fe_test = dat$fips[bsamp])
-# convolutional = NULL
-# penalize_toplayer = TRUE
-# initialization = 'HZRS'
-# dropout_hidden <- dropout_input <- 1
-# dropout_hidden <- .5
-# dropout_input <- .8
-# # stop_early = NULL
-
-# rm(list=ls())
-# gc()
-# gc()
-# "%ni%" <- Negate("%in%")
-# mse <- function(x, y){mean((x-y)^2)}
-#
-# library(devtools)
-# install_github("cranedroesch/panelNNET", ref = "multinet", force = F)
-# library(panelNNET)
-# library(doParallel)
-# library(doBy)
-# library(glmnet)
-# library(dplyr)
-# library(randomForest)
-# library(splines)
-# set.seed(69)
-# N <- 1000
-# u <- rnorm(N)
-# x <- runif(N, 0, 20) %>% sort
-# y <- 3*sin(x) + u
-# ut <- rnorm(N)
-# xt <- runif(N, 0, 20) %>% sort
-# yt <- 3*sin(xt) + ut
-# plot(x, y)
-# X <- matrix(x)
-# hidden_units <- 40:30
-# fe_var = NULL
-# maxit = 1000
-# lam = 0.000001
-# time_var = NULL
-# param = NULL
-# verbose = F
-# report_interval = 1
-# gravity = 1.01
-# convtol = 1e-3
-# activation = 'lrelu'
-# start_LR = .001
-# parlist = NULL
-# OLStrick = T
-# OLStrick_interval = 1
-# batchsize = N/20
+# batchsize = 256
 # maxstopcounter = 25
 # LR_slowing_rate = 2
 # parapen = NULL
 # return_best = TRUE
-# RMSprop = T
-# stop_early = list(check_every = 1,
-#                   max_ES_stopcounter = 1e6,
-#                   y_test = y,
-#                   X_test = as.matrix(x),
-#                   P_test = NULL,
-#                   fe_test =NULL)
-# convolutional = NULL
-# penalize_toplayer = TRUE
+# 
 # RMSprop = TRUE
-# initialization = 'HZRS'
-# dropout_hidden <- dropout_input <- 1
-# dropout_hidden <- .9
-# dropout_input <- .99
-# stop_early = NULL
-
-
+# dropout_input <- dropout_hidden <- TRUE
+# convolutional <- NULL
+# initialization = "HZRS"
+# 
 
   ##########
   #Define internal functions
