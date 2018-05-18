@@ -56,6 +56,11 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
                      STATS = attr(obj$param, "scaled:scale"), 
                      FUN = '/')
         } else {P <- NULL}
+        # deal with NAN columns
+        D <- lapply(D, function(x){
+          nans <- apply(x, 2, function(y){all(is.nan(y))})
+          x[,nans] <- 0
+        })
         # compute hidden layers
         nlayers <- sapply(obj$parlist, length)
         nlayers <- nlayers[!grepl("param", names(nlayers))]
