@@ -5,12 +5,11 @@
 predict.panelNNET <-
 function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
          , numerical_jacobian = FALSE, parallel_jacobian = FALSE, convolutional = NULL){
-# obj = pnn
-# newX = list(cont[oob,], inst[oob,])
-# new.param =  dat[,grepl("GDD|TAP", colnames(dat))][oob,]
-# fe.newX = as.factor(oobcl)
-# y_test = dat$dtrat[oob]
-# convolutional <- NULL
+# obj = pr_obj
+# y_test = stop_early$y_test
+# newX = stop_early$X_test
+# fe.newX = stop_early$fe_test
+# new.param = stop_early$P_test
   if (obj$activation == 'tanh'){
     activ <- tanh
   }
@@ -58,8 +57,8 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
                      FUN = '/')
         } else {P <- NULL}
         # compute hidden layers
-        nlayers <- sapply(obj$hidden_layers, length)
-        nlayers <- nlayers[names(nlayers)!= "param"]
+        nlayers <- sapply(obj$parlist, length)
+        nlayers <- nlayers[!grepl("param", names(nlayers))]
         HL <- calc_hlayers(parlist = obj$parlist, 
                            X = D, 
                            param = P, 

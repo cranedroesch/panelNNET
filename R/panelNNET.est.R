@@ -5,9 +5,6 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                           initialization, dropout_hidden, dropout_input, convolutional,
                           LR_slowing_rate, return_best, stop_early, ...){
 
-# #######################################
-# # bayesian hyperparameter search on PCs, doing the PCA train/test split appropriately
-# 
 # rm(list=ls())
 # gc()
 # gc()
@@ -22,7 +19,8 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # library(glmnet)
 # library(dplyr)
 # library(randomForest)
-# 
+# library(e1071)
+# library(clue)
 # setwd("N:/ARMS/ARMS Work Share/McFadden - Seeds")
 # 
 # # setup parallel backend
@@ -46,11 +44,35 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 #                                    "pmdi_risk_july", "zip", "dtrat", "corngrainac")]
 # colnames(cont)
 # 
+# # change the scale of some of the controls, to avoid numerical issues
+# cont$worklandac <- cont$worklandac/1e6
+# cont$totalcashrent <- cont$totalcashrent/1e6
+# cont$landretirepay <- cont$landretirepay/1e6
+# cont$worklandpay <- cont$worklandpay/1e6
+# cont$disasterpay <- cont$disasterpay/1e6
+# cont$fedclinsurpay <- cont$fedclinsurpay/1e6
+# cont$otherclinsurpay <- cont$otherclinsurpay/1e6
+# cont$fedcropinsurcost <- cont$fedcropinsurcost/1e6
+# cont$purirrwater <- cont$purirrwater/1e6
+# 
 # #####################################
 # # sampling
 # 
+# predict.kmeans <- function(km, data){
+#   k <- nrow(km$centers)
+#   n <- nrow(data)
+#   d <- as.matrix(dist(rbind(km$centers, cbind(dat$longitude, dat$latitude))))[-(1:k),1:k]
+#   out <- apply(d, 1, which.min)
+#   return(out)
+# }
+# 
+# 
 # # function to first subsample from the whole population, and then bootstrap spatial clusters
 # sub_then_cluster <- function(lon, lat, K, rate, viz = FALSE){
+#   # lat <- dat$latitude
+#   # lon <- dat$longitude
+#   # K <- 50
+#   # rate <- .9
 #   # subsample
 #   insamp <- sample(1:length(lat), length(lat)*rate, replace = FALSE)
 #   oosamp <- (1:length(lat))[(1:length(lat)) %ni% insamp]
@@ -66,60 +88,76 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 #     points(coords[km$cluster %in% oobsamp, 1], coords[km$cluster %in% oobsamp, 2], pch = 1)    
 #   }
 #   l <- length(lat)
-#   out <- data.frame(subsamp = 1:l %in% insamp)
-#   out$cluster <- NA
-#   out$cluster[out$subsamp == TRUE] <- km$cluster
-#   out$insamp <- (out$subsamp == TRUE & out$cluster %in% bsamp)
+#   out = data.frame(idx = 1:l)
+#   out$subsamp <- out$idx %in% insamp
+#   out$cl <- cl_predict(km, cbind(lon, lat))
 #   frq <- table(bsamp) %>% t %>% t %>% as.data.frame
 #   frq <- frq[,-2]
 #   frq$bsamp <- as.numeric(as.character(frq$bsamp))
-#   out <- full_join(out, frq, by = c("cluster" = "bsamp"))
+#   colnames(frq)[1] <- "cl"
+#   out <- full_join(out, frq)
 #   out$Freq[is.na(out$Freq)] <- 0
-#   out$id <- 1:l
-#   out <- foreach(i = 1:l, .combine = rbind) %do% {
-#     d <- out[i,]
-#     if (d$Freq>0){
-#       foreach(j = 1:d$Freq, .combine = rbind) %do% {
-#         d
-#       }      
-#     }
-#   }
-#   return(data.frame(idx = out$id, cluster = out$cluster))
+#   return(out)
 # }
 # 
 # #############
 # # fit
 # 
-# set.seed(1, kind = "L'Ecuyer-CMRG")
-# samp <- sub_then_cluster(dat$longitude, dat$latitude, 50, .9, viz = FALSE)
 # 
-# y = dat$dtrat[samp$idx]
-# X = list(cont[samp$idx,], inst[samp$idx,])
-# hidden_units = list(c(10, 10), c(10, 10))
-# fe_var = samp$cluster
-# maxit = 1000
+# set.seed(1, kind = "L'Ecuyer-CMRG")
+# samp <- sub_then_cluster(dat$longitude, dat$latitude, 50, .9, viz = TRUE)
+# 
+# head(samp)
+# l <- length(dat$latitude)
+# out <- foreach(i = 1:l, .combine = rbind) %do% {
+#   d <- samp[i,]
+#   if (d$Freq>0){
+#     foreach(j = 1:d$Freq, .combine = rbind) %do% {
+#       d
+#     }      
+#   }
+# }
+# 
+# is <- out$idx
+# oos <- samp$idx[samp$subsamp == FALSE]
+# oob <- samp$idx[samp$Freq == 0 & samp$subsamp == TRUE]
+# oobcl <- samp$cl[oob]
+# 
+# 
+# y = dat$dtrat[is]
+# X = list(cont[is,], inst[is,])
+# hidden_units = list(c(10, 2), c(10, 2))
+# fe_var = as.factor(out$cl)
+# maxit = 10
 # lam = 0
-# param = parinst[samp$idx,]
+# param = dat[,grepl("GDD|TAP", colnames(dat))][is,]
 # verbose = T
 # report_interval = 1
 # gravity = 1.01
-# convtol = 1e-3
+# convtol = 1e-8
 # activation = 'lrelu'
 # start_LR = .0001
 # parlist = NULL
 # OLStrick = TRUE
-# OLStrick_interval = 25
+# OLStrick_interval = 1
 # batchsize = 256
 # maxstopcounter = 25
 # LR_slowing_rate = 2
 # parapen = NULL
 # return_best = TRUE
+# stop_early = list(y_test = dat$dtrat[oob],
+#                   P_test = as.matrix(dat[,grepl("GDD|TAP", colnames(dat))][oob,]),
+#                   X_test = list(as.matrix(cont[oob,]), as.matrix(inst[oob,])),
+#                   fe_test = as.factor(oobcl),
+#                   check_every = 1,
+#                   max_ES_stopcounter = 20)
+# 
 # 
 # RMSprop = TRUE
 # dropout_input <- dropout_hidden <- TRUE
 # convolutional <- NULL
 # initialization = "HZRS"
-# 
+
 
   ##########
   #Define internal functions
