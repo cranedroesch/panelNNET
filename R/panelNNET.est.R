@@ -624,6 +624,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
       hlayers[[i]][[length(hlayers[[i]])]]
     }
+    Z <- cbind(param, as.matrix(Z))
     Zdm <- demeanlist(as.matrix(Z), list(fe_var))
     B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
     fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(parlist$beta_param, B)))
