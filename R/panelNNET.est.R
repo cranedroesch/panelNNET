@@ -5,159 +5,37 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                           initialization, dropout_hidden, dropout_input, convolutional,
                           LR_slowing_rate, return_best, stop_early, ...){
 
-# rm(list=ls())
-# gc()
-# gc()
-# "%ni%" <- Negate("%in%")
-# mse <- function(x, y){mean((x-y)^2)}
-# 
-# library(devtools)
-# install_github("cranedroesch/panelNNET", ref = "multinet", force = F)
-# library(panelNNET)
-# library(doParallel)
-# library(doBy)
-# library(glmnet)
-# library(dplyr)
-# library(randomForest)
-# library(e1071)
-# library(clue)
-# setwd("N:/ARMS/ARMS Work Share/McFadden - Seeds")
-# 
-# # setup parallel backend
-# cl <- makeCluster(detectCores()) 
-# registerDoParallel(cl)
-# 
-# # load data
-# dat <- readRDS("DTC_zipcode.Rds")
-# dat <- dat[,sapply(dat, sd)>0]
-# # designate variables as controls and instruments
-# # lat/lon are among the instruments only because of conditioning on spatial fixed effects.  
-# inst <- dat[,grep("_jday_|GDD|latitude|longitude|TAP", colnames(dat))]
-# # parametric instruments (potential)
-# parinst <- dat[,grep("_jul_|_aug_|jul12sev|jul11sev", colnames(dat))]
-# # nonparametric controls
-# cont <- dat[, colnames(dat) %ni% colnames(inst) &
-#               colnames(dat) %ni% colnames(parinst) &
-#               colnames(dat) %ni% c("poid", "vallwt0", "fips", "crd", "state", "lrr", "dtind", "dtcornac",
-#                                    "corngrainyield", "corngrainbu", "cornsilbu", "soybu", "dr_jul_13", 
-#                                    "dr_aug_13", "jul13sev", "yrsevdroughtjul","tmp_pcp_corr_july", "tmp_pcp_corr_aug",
-#                                    "pmdi_risk_july", "zip", "dtrat", "corngrainac")]
-# colnames(cont)
-# 
-# # change the scale of some of the controls, to avoid numerical issues
-# cont$worklandac <- cont$worklandac/1e6
-# cont$totalcashrent <- cont$totalcashrent/1e6
-# cont$landretirepay <- cont$landretirepay/1e6
-# cont$worklandpay <- cont$worklandpay/1e6
-# cont$disasterpay <- cont$disasterpay/1e6
-# cont$fedclinsurpay <- cont$fedclinsurpay/1e6
-# cont$otherclinsurpay <- cont$otherclinsurpay/1e6
-# cont$fedcropinsurcost <- cont$fedcropinsurcost/1e6
-# cont$purirrwater <- cont$purirrwater/1e6
-# 
-# #####################################
-# # sampling
-# 
-# predict.kmeans <- function(km, data){
-#   k <- nrow(km$centers)
-#   n <- nrow(data)
-#   d <- as.matrix(dist(rbind(km$centers, cbind(dat$longitude, dat$latitude))))[-(1:k),1:k]
-#   out <- apply(d, 1, which.min)
-#   return(out)
-# }
-# 
-# 
-# # function to first subsample from the whole population, and then bootstrap spatial clusters
-# sub_then_cluster <- function(lon, lat, K, rate, viz = FALSE){
-#   # lat <- dat$latitude
-#   # lon <- dat$longitude
-#   # K <- 50
-#   # rate <- .9
-#   # subsample
-#   insamp <- sample(1:length(lat), length(lat)*rate, replace = FALSE)
-#   oosamp <- (1:length(lat))[(1:length(lat)) %ni% insamp]
-#   # kmeans
-#   coords <- cbind(lon[insamp], lat[insamp])
-#   km <- kmeans(coords, K)
-#   # bootstrapping
-#   bsamp <- sample(1:K, replace = TRUE)
-#   oobsamp <- (1:K)[1:K %ni% bsamp]
-#   if (viz == TRUE){
-#     plot(coords[km$cluster %in% bsamp, 1], coords[km$cluster %in% bsamp, 2], col = km$cluster[km$cluster %in% bsamp], pch = 19)
-#     points(lon[oosamp], lat[oosamp], pch = "x", cex = 1)  
-#     points(coords[km$cluster %in% oobsamp, 1], coords[km$cluster %in% oobsamp, 2], pch = 1)    
-#   }
-#   l <- length(lat)
-#   out = data.frame(idx = 1:l)
-#   out$subsamp <- out$idx %in% insamp
-#   out$cl <- cl_predict(km, cbind(lon, lat))
-#   frq <- table(bsamp) %>% t %>% t %>% as.data.frame
-#   frq <- frq[,-2]
-#   frq$bsamp <- as.numeric(as.character(frq$bsamp))
-#   colnames(frq)[1] <- "cl"
-#   out <- full_join(out, frq)
-#   out$Freq[is.na(out$Freq)] <- 0
-#   return(out)
-# }
-# 
-# #############
-# # fit
-# 
-# 
-# set.seed(1, kind = "L'Ecuyer-CMRG")
-# samp <- sub_then_cluster(dat$longitude, dat$latitude, 50, .9, viz = TRUE)
-# 
-# head(samp)
-# l <- length(dat$latitude)
-# out <- foreach(i = 1:l, .combine = rbind) %do% {
-#   d <- samp[i,]
-#   if (d$Freq>0){
-#     foreach(j = 1:d$Freq, .combine = rbind) %do% {
-#       d
-#     }      
-#   }
-# }
-# 
-# is <- out$idx
-# oos <- samp$idx[samp$subsamp == FALSE]
-# oob <- samp$idx[samp$Freq == 0 & samp$subsamp == TRUE]
-# oobcl <- samp$cl[oob]
-# 
-# 
-# y = dat$dtrat[is]
-# X = list(cont[is,], inst[is,])
-# hidden_units = list(c(10, 2), c(10, 2))
-# fe_var = as.factor(out$cl)
-# maxit = 10
-# lam = 0
-# param = dat[,grepl("GDD|TAP", colnames(dat))][is,]
-# verbose = T
-# report_interval = 1
-# gravity = 1.01
-# convtol = 1e-8
-# activation = 'lrelu'
-# start_LR = .0001
-# parlist = NULL
-# OLStrick = TRUE
-# OLStrick_interval = 1
-# batchsize = 256
-# maxstopcounter = 25
-# LR_slowing_rate = 2
-# parapen = NULL
-# return_best = TRUE
-# stop_early = list(y_test = dat$dtrat[oob],
-#                   P_test = as.matrix(dat[,grepl("GDD|TAP", colnames(dat))][oob,]),
-#                   X_test = list(as.matrix(cont[oob,]), as.matrix(inst[oob,])),
-#                   fe_test = as.factor(oobcl),
-#                   check_every = 1,
-#                   max_ES_stopcounter = 20)
+#   y = dat$dtrat[is]
+#   X = Xtr
+#   hidden_units = list(c(10,1), c(10,1), c(10,1), c(10,1), c(10,1),c(10,1))
+#   fe_var = as.factor(out$cl)
+#   maxit = 10
+#   lam = 0
+#   param = NULL
+#   verbose = T
+#   report_interval = 1
+#   gravity = 1.01
+#   convtol = 1e-8
+#   activation = 'lrelu'
+#   start_LR = .0001
+#   parlist = NULL
+#   OLStrick = TRUE
+#   OLStrick_interval = 1
+#   batchsize = length(is)
+#   maxstopcounter = 25
+#   LR_slowing_rate = 2
+#   parapen = NULL
+#   return_best = TRUE
+#   dropout_hidden = 1
+#   dropout_input = 1
 # 
 # 
 # RMSprop = TRUE
 # dropout_input <- dropout_hidden <- TRUE
 # convolutional <- NULL
 # initialization = "HZRS"
-
+# penalize_toplayer = FALSE
+# stop_early = NULL
 
   ##########
   #Define internal functions
@@ -470,8 +348,14 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
         }
       }
       # Update parameters from update list
-      parlist <- recursive_subtract(parlist, updates)
-      # parlist <- mapply('-', parlist, updates)
+      # where there is no parametric term (no fe and no params specified), append a zero-length term to the updates list
+      if (length(parlist$beta_param == 0)){
+        parlist$beta_param <- NULL
+        parlist <- recursive_subtract(parlist, updates)
+        parlist$beta_param <- c()
+      } else {
+        parlist <- recursive_subtract(parlist, updates)
+      }
       if (OLStrick == TRUE & (iter %% OLStrick_interval == 0 | iter == 0)){ # do OLStrick on first iteration
         # Update hidden layers
         hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var,
