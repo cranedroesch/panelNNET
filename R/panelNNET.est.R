@@ -7,28 +7,33 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 
 #   y = dat$dtrat[is]
 #   X = Xtr
-#   hidden_units = list(c(10,1), c(10,1), c(10,1), c(10,1), c(10,1),c(10,1))
+#   hidden_units = list(c(50,50,1), c(50,50,1), c(50,50,1), c(50,50,1), c(50,50,1),c(50,50,1))
 #   fe_var = as.factor(out$cl)
-#   maxit = 10
+#   maxit = 200
 #   lam = 0
 #   param = NULL
 #   verbose = T
 #   report_interval = 1
-#   gravity = 1.01
+#   gravity = metapar$gravity[i]
 #   convtol = 1e-8
 #   activation = 'lrelu'
-#   start_LR = .0001
-#   parlist = NULL
+#   start_LR = metapar$start_LR[i]
+#   parlist = bestparlist
 #   OLStrick = TRUE
-#   OLStrick_interval = 1
-#   batchsize = length(is)
+#   OLStrick_interval = 20
+#   batchsize = metapar$batchsize[i]
 #   maxstopcounter = 25
-#   LR_slowing_rate = 2
+#   LR_slowing_rate = metapar$LRSR[i]
 #   parapen = NULL
 #   return_best = TRUE
-#   dropout_hidden = 1
-#   dropout_input = 1
-# 
+#   dropout_hidden = metapar$drop[i]
+#   dropout_input = metapar$drop[i]^.321
+#   stop_early = list(y_test = dat$dtrat[oob],
+#                     P_test = NULL,
+#                     X_test = Xte,
+#                     fe_test = as.factor(oobcl),
+#                     check_every = 1,
+#                     max_ES_stopcounter = 20)
 # 
 # RMSprop = TRUE
 # dropout_input <- dropout_hidden <- TRUE
