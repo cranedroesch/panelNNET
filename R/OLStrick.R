@@ -58,7 +58,7 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
     b <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(newlam2)), Zty)), error = function(e){b})
     b <- b*scalefac
     # b <- as.numeric(coef(glmnet(Zdm, targ, lambda = newlam2, standardize = T, intercept = F, alpha = 0, penalty.factor = D)))[-1]
-  } else {
+  } else { # when lam is equal to zero
     Zty <- MatMult(t(Zdm), targ)
     ZtZ <- MatMult(t(Zdm), Zdm)
     b <- tryCatch(as.numeric(MatMult(solve(ZtZ), Zty)),
@@ -67,9 +67,10 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
   if (inherits(b, "error")){
     print("singularity in OLStrick!")
     return(parlist)
-    # b <- as.numeric(MatMult(ginv(ZtZ + diag(D)*as.numeric(newlam)), Zty))
   }    
-  parlist$beta_param <- b[1:length(parlist$beta_param)]
+  if(length(parlist$beta_param)>0){
+    parlist$beta_param <- b[1:length(parlist$beta_param)]    
+  }
   leftoff <- length(parlist$beta_param)
   for (i in 1:(length(parlist)-1)){
     idx <- (leftoff+1):(leftoff+length(parlist[[i]]$beta))

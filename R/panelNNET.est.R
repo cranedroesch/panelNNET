@@ -299,17 +299,8 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       hlbatch <- calc_hlayers(plist, X = Xd,
                               param = param[curBat,], fe_var = fe_var[curBat], 
                               nlayers = nlayers, convolutional = convolutional, activ = activation)
-      # # update hidden layers based on batch
-      # for (p in 1:length(nlayers)){
-      #   for (h in 1:nlayers[p]){
-      #     if (is.null(droplist)){
-      #       hlayers[[p]][[h]][curBat,] <- hlbatch[[p]][[h]]
-      #     } else {
-      #       hlayers[[p]][[h]][curBat,droplist[[p]][[h+1]]] <- hlbatch[[p]][[h]]
-      #     }
-      #   }                  
-      # }
-      #Getyhat from that
+
+      # Get yhat from that
       yhat <- getYhat(plist, hlay = hlbatch, param[curBat,], y[curBat], ydm[curBat], fe_var[curBat], nlayers) # update yhat for purpose of computing gradients
       # before updating gradients, compute square of gradients for RMSprop
       if (RMSprop ==  TRUE){
@@ -352,7 +343,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       if (length(parlist$beta_param)==0){
         parlist$beta_param <- NULL
         parlist <- recursive_subtract(parlist, updates)
-        parlist$beta_param <- c()
+        parlist$beta_param <- rep(0,0)
       } else {
         parlist <- recursive_subtract(parlist, updates)
       }
@@ -369,8 +360,6 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       hlayers <- calc_hlayers(parlist, X = X, param = param, fe_var = fe_var,
                               nlayers = nlayers, convolutional = convolutional, activ = activation)
       yhat <- getYhat(parlist, hlay = hlayers, param, y, ydm, fe_var, nlayers) # update yhat for purpose of computing gradients
-      # plot(x, y)
-      # lines(x, yhat, col = "red")
       mse <- mseold <- mean((y-yhat)^2)
       B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
       lowerpar <- foreach(i = 1:length(nlayers), .combine = c) %do% {unlist(parlist[[i]][1:nlayers[i]])}
