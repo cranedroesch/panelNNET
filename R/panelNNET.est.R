@@ -349,7 +349,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       }
       # Update parameters from update list
       # where there is no parametric term (no fe and no params specified), append a zero-length term to the updates list
-      if (length(parlist$beta_param == 0)){
+      if (length(parlist$beta_param)==0){
         parlist$beta_param <- NULL
         parlist <- recursive_subtract(parlist, updates)
         parlist$beta_param <- c()
