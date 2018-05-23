@@ -27,7 +27,9 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
     constraint <- sum(const^2)
     #set up the penalty vector
     D <- rep(1, ncol(Zdm))
-    D[1:length(parapen)] <- D[1:length(parapen)]*parapen #incorporate parapen into diagonal of covmat
+    if(!is.null(parapen)){
+      D[1:length(parapen)] <- D[1:length(parapen)]*parapen #incorporate parapen
+    }
     if (penalize_toplayer == FALSE){
       D <- D*0
     }
