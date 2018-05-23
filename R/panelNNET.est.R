@@ -40,7 +40,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
 # convolutional <- NULL
 # initialization = "HZRS"
 # penalize_toplayer = FALSE
-# stop_early = NULL
+# # stop_early = NULL
 
   ##########
   #Define internal functions
@@ -225,6 +225,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   if (!is.null(stop_early)){
     pr_test <- check_earlystop(stop_early)
     best_mse <- mse_test_vec <- mse_test <- msetest_old <- mean((stop_early$y_test-pr_test)^2)
+    print("OK")
   } else {mse_test <- best_mse <- NULL}
   # in-sample MSE and loss
   mse <- mseold <- mean((y-yhat)^2)
