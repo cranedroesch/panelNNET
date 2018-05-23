@@ -67,6 +67,7 @@ reconstitute <- function(dropped, droplist, full_old_parlist, nlayers){
     #   BP <- full_old_parlist$beta_param      
     # }
     emptygrads <- recursive_mult(full_old_parlist, 0)
+    if(length(emptygrads$beta_param) == 0){emptygrads$beta_param <- NULL} # lose empty slot for beta param when there are no parametric terms
     for (j in 1:length(nlayers)){
       if (nlayers[[j]] > 1){
         emptygrads[[j]][[1]][c(TRUE,droplist[[j]][[1]]),droplist[[j]][[2]]] <- dropped[[j]][[1]]
