@@ -143,7 +143,8 @@ predfun_multinet <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param 
   if (obj$activation == 'lrelu'){
     activ <- lrelu
   }
-  nlayers <- foreach(i = 1:(length(obj$parlist)-1), .combine = c) %do% {length(obj$hidden_layers[[i]])}
+  nlayers <- sapply(obj$hidden_layers, length)
+  print(nlayers)
   # rescale new data to scale of training data
   D <- foreach(i = 1:length(obj$X)) %do% {
     sweep(sweep(newX[[i]], 2, STATS = attr(obj$X[[i]], "scaled:center"), FUN = '-'), 2, STATS = attr(obj$X[[i]], "scaled:scale"), FUN = '/')
