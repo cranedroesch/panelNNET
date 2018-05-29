@@ -81,7 +81,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                    fe_var = unique(fe_var),
                    fe = fe_output,
                    convolutional = NULL,
-                   hidden_layers = hidden_units)
+                   hidden_layers = hlayers)
     pr_test <- predict.panelNNET(obj = pr_obj, 
                                  y_test = stop_early$y_test,
                                  newX = stop_early$X_test, 
