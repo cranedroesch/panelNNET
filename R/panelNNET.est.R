@@ -68,7 +68,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
         hlayers[[i]][[length(hlayers[[i]])]]
       }
       Z <- cbind(param, as.matrix(Z))
-      Zdm <- demeanlist(as.matrix(Z), list(fe_var))
+      Zdm <- demeanlist(as.matrix(Z), list(fe_var), threads = 1)
       B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
       fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(parlist$beta_param, B)))
       fe_output <- data.frame(fe_var, fe)
@@ -215,7 +215,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
                           convolutional = convolutional, activation = activation)
   #calculate ydm and put it in global... ...one year later, I forget why this needs to be in global
   if (!is.null(fe_var)){
-    ydm <<- demeanlist(y, list(fe_var)) 
+    ydm <<- demeanlist(y, list(fe_var), threads = 1) 
   }
   #####################################
   #start setup
@@ -508,7 +508,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
       hlayers[[i]][[length(hlayers[[i]])]]
     }
     Z <- cbind(param, as.matrix(Z))
-    Zdm <- demeanlist(as.matrix(Z), list(fe_var))
+    Zdm <- demeanlist(as.matrix(Z), list(fe_var), threads = 1)
     B <- foreach(i = 1:length(nlayers), .combine = c) %do% {parlist[[i]]$beta}
     fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(parlist$beta_param, B)))
     fe_output <- data.frame(fe_var, fe)

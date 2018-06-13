@@ -12,8 +12,8 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
   }
   Zdm <- cbind(hidden_layers$param, Zdm)
   if (!is.null(fe_var)){
-    Zdm <- demeanlist(Zdm, list(fe_var))
-    targ <- demeanlist(y, list(fe_var))      
+    Zdm <- demeanlist(Zdm, list(fe_var), threads = 1)
+    targ <- demeanlist(y, list(fe_var), threads = 1)      
   }  else {
     targ <- y
   }   

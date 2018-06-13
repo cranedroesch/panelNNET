@@ -6,7 +6,7 @@ getYhat <- function(pl, hlay, param, y, ydm, fe_var, nlayers){
   }
   if (!is.null(fe_var)){
     Z <- cbind(param, as.matrix(Z))
-    Zdm <- demeanlist(Z, list(fe_var))
+    Zdm <- demeanlist(Z, list(fe_var), threads = 1)
     B <- foreach(i = 1:length(nlayers), .combine = c) %do% {pl[[i]]$beta}
     fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(pl$beta_param, B)))
     yhat <- MatMult(Z, c(pl$beta_param, B)) + fe    

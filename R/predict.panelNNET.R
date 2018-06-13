@@ -70,9 +70,9 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
         Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
           HL[[i]][[length(HL[[i]])]]
         }
-        Zdm <- demeanlist(as.matrix(Z), list(fe.newX[fe.newX %ni% obj$fe$fe_var]))
+        Zdm <- demeanlist(as.matrix(Z), list(fe.newX[fe.newX %ni% obj$fe$fe_var]), threads = 1)
         B <- foreach(i = 1:length(nlayers), .combine = c) %do% {obj$parlist[[i]]$beta}
-        ydm_test <- demeanlist(y_test[fe.newX %ni% obj$fe$fe_var], list(fe.newX[fe.newX %ni% obj$fe$fe_var]))
+        ydm_test <- demeanlist(y_test[fe.newX %ni% obj$fe$fe_var], list(fe.newX[fe.newX %ni% obj$fe$fe_var]), threads = 1)
         fe <- (y_test[fe.newX %ni% obj$fe$fe_var]-ydm_test) - 
           MatMult(as.matrix(Z)-Zdm, as.matrix(c(obj$parlist$beta_param, B)))
         FEs_to_append <- summaryBy(fe~fe_var, keep.names = T,
