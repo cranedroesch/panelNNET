@@ -1,36 +1,9 @@
-# panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param,
-#                           parapen, penalize_toplayer, parlist, verbose,
-#                           report_interval, gravity, convtol, RMSprop, start_LR,
-#                           activation, batchsize, maxstopcounter, OLStrick, OLStrick_interval,
-#                           initialization, dropout_hidden, dropout_input, convolutional,
-#                           LR_slowing_rate, return_best, stop_early, ...){
-  y = ytr
-  X = Xtr
-  param = Xp
-  hidden_units = list(c(50,50,10),c(50,50,10),c(50,50,10),c(50,50,10),c(50,50,10))
-  fe_var = fe_is
-  maxit = 500
-  lam = 0.0000001
-  verbose = F
-  report_interval = 1
-  gravity = 1.01
-  convtol = 1e-8
-  activation = 'lrelu'
-  start_LR = .0001
-  parlist = NULL
-  OLStrick = TRUE
-  OLStrick_interval = 1
-  batchsize = length(ytr)
-  maxstopcounter = 25
-  LR_slowing_rate = 2
-  return_best = TRUE
-  
-RMSprop = TRUE
-dropout_input <- dropout_hidden <- TRUE
-convolutional <- NULL
-initialization = "HZRS"
-penalize_toplayer = FALSE
-stop_early = NULL
+panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param,
+                          parapen, penalize_toplayer, parlist, verbose,
+                          report_interval, gravity, convtol, RMSprop, start_LR,
+                          activation, batchsize, maxstopcounter, OLStrick, OLStrick_interval,
+                          initialization, dropout_hidden, dropout_input, convolutional,
+                          LR_slowing_rate, return_best, stop_early, ...){
 
   ##########
   #Define internal functions
