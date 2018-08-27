@@ -13,19 +13,16 @@
 Semi-parametric fixed-effects models for panel data, using neural networks
 }
 \description{
-Function fits fixed effects models in which some variables entering linearly and others entering non-parametrically.  Nonparametric component of the model represented by a feed-forward neural network.  
+Function fits semiparametric models in which the nonparametric part is represented by a neural network.  Fixed-effects are available to represent repeated observations of cross-sectional units.
+
 }
 \usage{
-function(y, X, hidden_units, fe_var
-  , maxit = 100, lam = 0, time_var = NULL, param = NULL
-  , parapen = rep(0, ncol(param)), parlist = NULL, verbose = FALSE
-  , report_interval = 100
-  , gravity = 1.01, convtol = 1e-8, RMSprop = TRUE, start_LR = .01
-  , activation = 'relu'
-  , batchsize = nrow(X)
-  , maxstopcounter = 10, OLStrick = FALSE, initialization = 'HZRS'
-  , dropout_hidden = 1, dropout_input = 1
-  , convolutional = NULL, ...)
+function(y, X, hidden_units, fe_var, maxit, lam, time_var, param,
+                          parapen, penalize_toplayer, parlist, verbose,
+                          report_interval, gravity, convtol, RMSprop, start_LR,
+                          activation, batchsize, maxstopcounter, OLStrick, OLStrick_interval,
+                          initialization, dropout_hidden, dropout_input, convolutional,
+                          LR_slowing_rate, return_best, stop_early, ...)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -34,10 +31,10 @@ function(y, X, hidden_units, fe_var
 The response data
 }
   \item{X}{
-Variables to enter non-parametrically, the "inputs"
+Variables to enter non-parametrically, the "inputs".  This may be a data frame, matrix, or list of data frames or matrices.  If a list, panelNNET will fit an "additive net", in which separate neural networks will be concatenated at the top later.
 }
   \item{hidden_units}{
-Integer vector of hidden units within hidden layers.  First entry is the lowest layer, subsequent entries are higher layers.
+Integer vector of hidden units within hidden layers, or list of integer vectors for the additive nets case.  First entry is the lowest layer, subsequent entries are higher layers.
 }
   \item{fe_var}{
 A factor indicating the cross-sectional unit.  At present only one cross-sectional unit is supported.
@@ -46,7 +43,7 @@ A factor indicating the cross-sectional unit.  At present only one cross-section
 Maximum number of epochs
 }
   \item{lam}{
-Lambda, the penalty (or "weight decay") factor 
+Lambda, the L2 penalty (or "weight decay") factor.  Non-L2 penalties not yet supported.
 }
   \item{time_var}{
 Numeric vector of the time variable
@@ -55,8 +52,11 @@ Numeric vector of the time variable
 Terms to enter parametrically, at the top layer
 }
   \item{parapen}{
-Numeric vector multiplying the penalties for the parametric terms.  Defaults to a vector of zeros; parametric terms are unpenalized.  This is useful when inference on these terms is desired.  
+Numeric vector multiplying the penalties for the parametric terms.  Defaults to a vector of zeros; parametric terms are unpenalized. 
 }
+  \item{penalize_toplayer}{
+  Defaults to TRUE -- if FALSE, the top layer of the nonparametric part of the model will not be penalized.  This is rarely useful.
+  }
   \item{parlist}{
 A list of starting values for the parameters.  Chosen randomly if omitted (see the "initialization" argument).  Useful when re-starting where another net left off 
 }
@@ -64,13 +64,13 @@ A list of starting values for the parameters.  Chosen randomly if omitted (see t
 If true will print progress to console, and make plots of the algorithm's progress
 }
   \item{gravity}{
-The learning rate will be multiplied by this factor after each step.
+The learning rate will be multiplied by this factor after each step in which the loss decreases.
 }
   \item{convtol}{
 Convergence tolerance.  When <<maxstopcounter>> successive iterations fail to improve MSE by this amount, gradient descent exits
 }
   \item{RMSprop}{
-Gradient descent by RMSprop.  If FALSE, by "vanilla" gradient descent
+Gradient descent by RMSprop.  If FALSE, step size is equal along each dimension.
 }
   \item{start_LR}{
 The initial learning rate a.k.a. step size
@@ -85,7 +85,10 @@ Size of batches for minibatch gradient descent.  Defaults to nrow(X), which is b
 How many times should the learning rate be halved after an epoch increases MSE, before panelNNET exits?
 }
   \item{OLStrick}{
-At the end of each epoch, find the closed-form solution on the top layer of the network that minimizes the penalized loss function.  
+At the end of each (OLStrick_interval)th epoch, find the closed-form solution on the top layer of the network that minimizes the penalized loss function.  
+}
+  \item{OLStrick_interval}{
+  Perform the OLS trick after this number of epochs.
 }
   \item{initialization}{
 If "HRZS", the weight initialization scheme proposed by He, Zhang, Ren, and Jian (2015).  If "XG", the weight initialization scheme proposed by Glorot and Bengio (2010).  Otherwise, draws from a uniform distribution with bounds of -.7 and .7, following recommndations in Hastie, Tibshirani, and Friedman.
@@ -99,6 +102,17 @@ If "HRZS", the weight initialization scheme proposed by He, Zhang, Ren, and Jian
   \item{convolutional}{
   When not null, a list with the following elements.  topology: an integer vector indicating when variables were measured, for example days in a season.  span: the width of local connectivity, in units of the topology.  step: the distance between centers of spans.
 }
+  \item{LR_slowing_rate}{
+  After an iteration in which the loss increases, decrease learning rate by gravity to the power of the LR_slowing_rate
+}
+  \item{return_best}{
+  If TRUE, return the parlist that minimizes loss over the course of training, rather than the most recent parlist.
+}
+  \item{stop_early}{
+  A list with elements (1) "check_every" -- defaults to 20.  Check test set performance after this number of iterations.  (2) "y_test" -- a vector of resposes in the test set.  (3) X_test -- a matrix (or list of matrices) of test-set variables for the nonparametric part of the model. (4) P_test -- a matrix of test-set variables for the parametric part of the model. (5) fe_test -- a vector of fixed effect labels for the test set.
+}
+
+
 
 }
 \details{
