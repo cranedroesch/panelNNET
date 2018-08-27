@@ -1,37 +1,9 @@
-# panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param,
-#                           parapen, penalize_toplayer, parlist, verbose,
-#                           report_interval, gravity, convtol, RMSprop, start_LR,
-#                           activation, batchsize, maxstopcounter, OLStrick, OLStrick_interval,
-#                           initialization, dropout_hidden, dropout_input, convolutional,
-#                           LR_slowing_rate, return_best, stop_early, ...){
-  y = ytr
-  X = Xtr
-  param = Xp
-  hidden_units = list(c(50,50,10),c(50,50,10),c(50,50,10),c(50,50,10),c(50,50,10))
-  fe_var = fe_is
-  maxit = 500
-  lam = 0.0000001
-  verbose = F
-  report_interval = 1
-  gravity = 1.01
-  convtol = 1e-8
-  activation = 'lrelu'
-  start_LR = .0001
-  parlist = NULL
-  OLStrick = TRUE
-  OLStrick_interval = 1
-  batchsize = length(ytr)
-  maxstopcounter = 25
-  LR_slowing_rate = 2
-  return_best = TRUE
-  
-RMSprop = TRUE
-dropout_input <- dropout_hidden <- TRUE
-convolutional <- NULL
-initialization = "HZRS"
-penalize_toplayer = FALSE
-stop_early = NULL
-
+panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param,
+                          parapen, penalize_toplayer, parlist, verbose,
+                          report_interval, gravity, convtol, RMSprop, start_LR,
+                          activation, batchsize, maxstopcounter, OLStrick, OLStrick_interval,
+                          initialization, dropout_hidden, dropout_input, convolutional,
+                          LR_slowing_rate, return_best, stop_early, ...){
   ##########
   #Define internal functions
   recursive_RMSprop <- function(x, y) tryCatch(LR/sqrt(x+1e-10) * y, error = function(e) Map(recursive_RMSprop, x, y))
@@ -205,29 +177,8 @@ stop_early = NULL
                           convolutional = convolutional, activation = activation)
   #calculate ydm and put it in global... ...one year later, I forget why this needs to be in global
   if (!is.null(fe_var)){
-    library(microbenchmark)
-    microbenchmark(
-      ydm <<- demeanlist(y, list(fe_var), threads = 8, eps = 1e-8), times = 20       
-    )
-
+    ydm <<- demeanlist(y, list(fe_var))
   }
-  
-  oldopts <- options(lfe.threads=1)
-  ## create a matrix
-  mtx <- data.frame(matrix(rnorm(999),ncol=3))
-  # a list of factors
-  rgb <- c('red','green','blue')
-  fl <- replicate(4, factor(sample(rgb,nrow(mtx),replace=TRUE)), simplify=FALSE)
-  names(fl) <- paste('g',seq_along(fl),sep='')
-  # centre on all means
-  mtx0 <- demeanlist(mtx,fl)
-  head(data.frame(mtx0,fl))
-  
-  microbenchmark(
-    demeanlist(X[[1]], fe_var)
-  )
-  
-  
   #####################################
   #start setup
   #get starting mse
@@ -277,7 +228,6 @@ stop_early = NULL
   # 
   # }
   # gcheck(1)
-
   #Initialize updates
   updates <- relist(unlist(parlist)*0)
   #initialize G2 term for RMSprop

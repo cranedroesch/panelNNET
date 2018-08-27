@@ -1,12 +1,9 @@
 
 OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, penalize_toplayer, nlayers){
-  # parlist <- pnn$parlist
-  # hidden_layers <- pnn$hidden_layers
-  # y = pnn$y
-  # fe_var <- pnn$fe_var
-  # lam <- pnn$lam
-  # parapen <- pnn$parapen
-  # hidden_layers <- hlayers
+  hidden_layers <- hlayers
+  hl <- hidden_layers
+  pl <- parlist
+  # concatenate top of net.  only relevant in the case of a multinet
   Zdm <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
     hidden_layers[[i]][[length(hidden_layers[[i]])]]
   }
@@ -18,6 +15,7 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
     targ <- y
   }   
   if (lam >0){
+    # set up the constraint
     const <- parlist$beta_param*parapen
     if (penalize_toplayer == TRUE){
       for (i in 1:(length(parlist)-1)){
@@ -46,8 +44,11 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
     }
     # matmult   
     Zty <- MatMult(t(sZdm), starg)
+
     ZtZ <- MatMult(t(sZdm), sZdm)
-    scalefac <- attr(starg, "scaled:scale")/attr(sZdm, "scaled:scale")
+    scalefac <- (attr(starg, "scaled:scale")/attr(sZdm, "scaled:scale"))
+# scalefac <- 1/attr(sZdm, "scaled:scale")
+    
     scalefac[scalefac == Inf] <- 1
     f <- function(L){
       bi <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(L)), Zty)), error = function(e){b})
@@ -59,7 +60,6 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
     #New top-level params
     b <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(newlam2)), Zty)), error = function(e){b})
     b <- b*scalefac
-    # b <- as.numeric(coef(glmnet(Zdm, targ, lambda = newlam2, standardize = T, intercept = F, alpha = 0, penalty.factor = D)))[-1]
   } else { # when lam is equal to zero
     Zty <- MatMult(t(Zdm), targ)
     ZtZ <- MatMult(t(Zdm), Zdm)
@@ -81,3 +81,5 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
   }
   return(parlist)
 }
+
+
