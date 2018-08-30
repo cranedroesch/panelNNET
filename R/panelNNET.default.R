@@ -10,7 +10,8 @@ function(y, X, hidden_units, fe_var
   , maxstopcounter = 10, OLStrick = FALSE, OLStrick_interval = 1
   , initialization = 'HZRS'
   , dropout_hidden = 1, dropout_input = 1
-  , convolutional = NULL, LR_slowing_rate = 2, return_best = TRUE, stop_early = NULL, ...)
+  , convolutional = NULL, LR_slowing_rate = 2, return_best = TRUE, stop_early = NULL
+  , weights = NULL, ...)
 {
   out <- panelNNET.est(y, X, hidden_units, fe_var, maxit, lam
     , time_var, param, parapen, penalize_toplayer, parlist, verbose
@@ -18,7 +19,7 @@ function(y, X, hidden_units, fe_var
     , start_LR, activation 
     , batchsize, maxstopcounter
     , OLStrick, OLStrick_interval, initialization, dropout_hidden, dropout_input
-    , convolutional, LR_slowing_rate, return_best, stop_early
+    , convolutional, LR_slowing_rate, return_best, stop_early, weights
   )
   out$call = match.call()
   class(out) <- 'panelNNET'

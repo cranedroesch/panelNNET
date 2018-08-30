@@ -1,16 +1,16 @@
 
-OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, penalize_toplayer, nlayers){
-  hidden_layers <- hlayers
-  hl <- hidden_layers
-  pl <- parlist
+OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, penalize_toplayer, nlayers, weights){
+  # hidden_layers <- hlayers
+  # hl <- hidden_layers
+  # pl <- parlist
   # concatenate top of net.  only relevant in the case of a multinet
   Zdm <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
     hidden_layers[[i]][[length(hidden_layers[[i]])]]
   }
   Zdm <- cbind(hidden_layers$param, Zdm)
   if (!is.null(fe_var)){
-    Zdm <- demeanlist(Zdm, list(fe_var), threads = 1)
-    targ <- demeanlist(y, list(fe_var), threads = 1)      
+    Zdm <- demeanlist(Zdm, list(fe_var), threads = 1, weights = weights^.5)
+    targ <- demeanlist(y, list(fe_var), threads = 1, weights = weights^.5)      
   }  else {
     targ <- y
   }   
@@ -43,12 +43,16 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
       sZdm[,nancols] <- 1
     }
     # matmult   
-    Zty <- MatMult(t(sZdm), starg)
-
-    ZtZ <- MatMult(t(sZdm), sZdm)
+    if (any(weights!=1)){
+      swZtW <- sweep(t(sZdm),2, weights,"*")
+      ZtZ <- MatMult(swZtW, sZdm)
+      Zty <- MatMult(swZtW, starg)
+    } else {
+      Zty <- MatMult(t(sZdm), starg)
+      ZtZ <- MatMult(t(sZdm), sZdm)
+    }
     scalefac <- (attr(starg, "scaled:scale")/attr(sZdm, "scaled:scale"))
-# scalefac <- 1/attr(sZdm, "scaled:scale")
-    
+
     scalefac[scalefac == Inf] <- 1
     f <- function(L){
       bi <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(L)), Zty)), error = function(e){b})
@@ -61,8 +65,14 @@ OLStrick_function <- function(parlist, hidden_layers, y, fe_var, lam, parapen, p
     b <- tryCatch(as.numeric(MatMult(solve(ZtZ + diag(D)*as.numeric(newlam2)), Zty)), error = function(e){b})
     b <- b*scalefac
   } else { # when lam is equal to zero
-    Zty <- MatMult(t(Zdm), targ)
-    ZtZ <- MatMult(t(Zdm), Zdm)
+    if (any(weights!=1)){
+      ZtW <- sweep(t(Zdm),2, weights,"*")
+      ZtZ <- MatMult(ZtW, Zdm)
+      Zty <- MatMult(ZtW, targ)
+    } else {
+      Zty <- MatMult(t(Zdm), targ)
+      ZtZ <- MatMult(t(Zdm), Zdm)
+    }
     b <- tryCatch(as.numeric(MatMult(solve(ZtZ), Zty)),
                   error = function(e){b})
   }

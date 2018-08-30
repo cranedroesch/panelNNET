@@ -1,4 +1,14 @@
-calc_grads<- function(plist, hlay, Xd, y, yhat, droplist = NULL, nlayers, convolutional = NULL, activ_prime, normalize = TRUE){
+calc_grads<- function(plist, 
+                      hlay, 
+                      Xd, 
+                      y, 
+                      yhat, 
+                      droplist = NULL, 
+                      nlayers, 
+                      convolutional = NULL, 
+                      activ_prime, 
+                      normalize = TRUE, 
+                      weights){
 # plist <- parlist
 # hlay <- hlayers
 # Xd <- X
@@ -11,7 +21,8 @@ calc_grads<- function(plist, hlay, Xd, y, yhat, droplist = NULL, nlayers, convol
   NL <- nlayers + as.numeric(!is.null(convolutional))
   grads <- foreach(p = 1:length(NL)) %do% {
     grads <- grad_stubs <- vector('list', NL[p] + 1)
-    grad_stubs[[length(grad_stubs)]] <- getDelta(as.matrix(y), yhat)
+    grad_stubs[[length(grad_stubs)]] <- getDelta(as.matrix(y), yhat)*weights
+    
     for (i in NL[p]:1){
       if (i == NL[p]){outer_param = as.matrix(c(plist[[p]]$beta))} else {outer_param = plist[[p]][[i+1]]}
       if (i == 1){lay = Xd[[p]]} else {lay= hlay[[p]][[i-1]]}
@@ -32,7 +43,7 @@ calc_grads<- function(plist, hlay, Xd, y, yhat, droplist = NULL, nlayers, convol
   }
   # add on parametric gradients
   if (!is.null(hlay$param)){
-    grads[[length(grads)+1]] <- MatMult(t(hlay$param), getDelta(as.matrix(y), yhat)) 
+    grads[[length(grads)+1]] <- MatMult(t(hlay$param), getDelta(as.matrix(y), yhat)*weights) 
   }
   # if (normalize == TRUE){
   #   fac <- 1/mean(unlist(grads))

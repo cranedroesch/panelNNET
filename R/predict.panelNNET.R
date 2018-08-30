@@ -4,12 +4,14 @@
 
 predict.panelNNET <-
 function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
-         , numerical_jacobian = FALSE, parallel_jacobian = FALSE, convolutional = NULL){
+         , numerical_jacobian = FALSE, parallel_jacobian = FALSE, convolutional = NULL, new.weights = NULL){
 # obj = pr_obj
 # y_test = stop_early$y_test
 # newX = stop_early$X_test
 # fe.newX = stop_early$fe_test
 # new.param = stop_early$P_test
+# new.weights <- stop_early$w_test
+  if (is.null(new.weights)){new.weights <- rep(1, nrow(newX))}
   if (obj$activation == 'tanh'){
     activ <- tanh
   }
@@ -70,9 +72,10 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
         Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
           HL[[i]][[length(HL[[i]])]]
         }
-        Zdm <- demeanlist(as.matrix(Z), list(fe.newX[fe.newX %ni% obj$fe$fe_var]), threads = 1)
+        w.newfe <- new.weights[fe.newX %ni% obj$fe$fe_var]
+        Zdm <- demeanlist(as.matrix(Z), list(fe.newX[fe.newX %ni% obj$fe$fe_var]), threads = 1, weights = w.newfe^.5)
         B <- foreach(i = 1:length(nlayers), .combine = c) %do% {obj$parlist[[i]]$beta}
-        ydm_test <- demeanlist(y_test[fe.newX %ni% obj$fe$fe_var], list(fe.newX[fe.newX %ni% obj$fe$fe_var]), threads = 1)
+        ydm_test <- demeanlist(y_test[fe.newX %ni% obj$fe$fe_var], list(fe.newX[fe.newX %ni% obj$fe$fe_var]), threads = 1, weights = w.newfe^.5)
         fe <- (y_test[fe.newX %ni% obj$fe$fe_var]-ydm_test) - 
           MatMult(as.matrix(Z)-Zdm, as.matrix(c(obj$parlist$beta_param, B)))
         FEs_to_append <- summaryBy(fe~fe_var, keep.names = T,
@@ -128,7 +131,7 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
   }
 }
 
-#prediction function, potentially for the Jacobian
+#prediction function,
 predfun_multinet <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param = NULL,
                     FEs_to_merge = NULL, return_toplayer = FALSE, convolutional = NULL){
   if (obj$activation == 'tanh'){
@@ -190,73 +193,73 @@ predfun_multinet <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param 
 }
 
 
-#prediction function, potentially for the Jacobian
-predfun <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param = NULL,
-                    FEs_to_merge = NULL, return_toplayer = FALSE, convolutional = NULL){
-  if (obj$activation == 'tanh'){
-    activ <- tanh
-  }
-  if (obj$activation == 'logistic'){
-    activ <- logistic
-  }
-  if (obj$activation == 'relu'){
-    activ <- relu
-  }
-  if (obj$activation == 'lrelu'){
-    activ <- lrelu
-  }
-  # rescale new data to scale of training data
-  D <- sweep(sweep(newX, 2, STATS = attr(obj$X, "scaled:center"), FUN = '-'), 2, STATS = attr(obj$X, "scaled:scale"), FUN = '/')
-  if (!is.null(obj$param)){
-    P <- sweep(sweep(new.param, 
-                     MARGIN = 2, 
-                     STATS = attr(obj$param, "scaled:center"), 
-                     FUN = '-'), 
-               MARGIN = 2, 
-               STATS = attr(obj$param, "scaled:scale"), 
-               FUN = '/')
-  } else {P <- NULL}
-  # compute hidden layers
-  HL <- calc_hlayers(parlist = obj$parlist, 
-                    X = D, 
-                    param = P, 
-                    fe_var = obj$fe_var, 
-                    nlayers = length(obj$hidden_layers)-!is.null(obj$convolutional),# subtract off 1 when convolutional because "nlayers" doesn't include conv layer
-                    convolutional = obj$convolutional,
-                    activation = obj$activation)
-  D <- HL[[length(HL)]]
-
-  if (return_toplayer == TRUE){
-    return(D)
-  }
-  xpart <- MatMult(D, as.matrix(c(plist$beta_param, plist$beta)))
-  if (is.null(obj$fe)){
-    yhat <- xpart
-  } else {
-    nd <- data.frame(fe.newX, xpart = as.numeric(xpart), id = 1:length(fe.newX))       
-    nd <- merge(nd, FEs_to_merge, by.x = 'fe.newX', by.y = 'fe_var', all.x = TRUE, sort = FALSE)
-    nd <- nd[order(nd$id),]
-    yhat <- nd$fe + nd$xpart
-  }
-  #otherwise...
-  return(yhat)
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# #prediction function, potentially for the Jacobian
+# predfun <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param = NULL,
+#                     FEs_to_merge = NULL, return_toplayer = FALSE, convolutional = NULL){
+#   if (obj$activation == 'tanh'){
+#     activ <- tanh
+#   }
+#   if (obj$activation == 'logistic'){
+#     activ <- logistic
+#   }
+#   if (obj$activation == 'relu'){
+#     activ <- relu
+#   }
+#   if (obj$activation == 'lrelu'){
+#     activ <- lrelu
+#   }
+#   # rescale new data to scale of training data
+#   D <- sweep(sweep(newX, 2, STATS = attr(obj$X, "scaled:center"), FUN = '-'), 2, STATS = attr(obj$X, "scaled:scale"), FUN = '/')
+#   if (!is.null(obj$param)){
+#     P <- sweep(sweep(new.param, 
+#                      MARGIN = 2, 
+#                      STATS = attr(obj$param, "scaled:center"), 
+#                      FUN = '-'), 
+#                MARGIN = 2, 
+#                STATS = attr(obj$param, "scaled:scale"), 
+#                FUN = '/')
+#   } else {P <- NULL}
+#   # compute hidden layers
+#   HL <- calc_hlayers(parlist = obj$parlist, 
+#                     X = D, 
+#                     param = P, 
+#                     fe_var = obj$fe_var, 
+#                     nlayers = length(obj$hidden_layers)-!is.null(obj$convolutional),# subtract off 1 when convolutional because "nlayers" doesn't include conv layer
+#                     convolutional = obj$convolutional,
+#                     activation = obj$activation)
+#   D <- HL[[length(HL)]]
+# 
+#   if (return_toplayer == TRUE){
+#     return(D)
+#   }
+#   xpart <- MatMult(D, as.matrix(c(plist$beta_param, plist$beta)))
+#   if (is.null(obj$fe)){
+#     yhat <- xpart
+#   } else {
+#     nd <- data.frame(fe.newX, xpart = as.numeric(xpart), id = 1:length(fe.newX))       
+#     nd <- merge(nd, FEs_to_merge, by.x = 'fe.newX', by.y = 'fe_var', all.x = TRUE, sort = FALSE)
+#     nd <- nd[order(nd$id),]
+#     yhat <- nd$fe + nd$xpart
+#   }
+#   #otherwise...
+#   return(yhat)
+# }
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
