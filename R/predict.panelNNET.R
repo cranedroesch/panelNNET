@@ -11,22 +11,22 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
 # fe.newX = stop_early$fe_test
 # new.param = stop_early$P_test
 # new.weights <- stop_early$w_test
-  if (is.null(new.weights)){new.weights <- rep(1, nrow(newX))}
-  if (obj$activation == 'tanh'){
-    activ <- tanh
-  }
-  if (obj$activation == 'logistic'){
-    activ <- logistic
-  }
-  if (obj$activation == 'relu'){
-    activ <- relu
-  }
-  if (obj$activation == 'lrelu'){
-    activ <- lrelu
-  }
   if (is.null(newX)){
     return(obj$yhat)
   } else {
+    if (is.null(new.weights)){new.weights <- rep(1, nrow(newX))}
+    if (obj$activation == 'tanh'){
+      activ <- tanh
+    }
+    if (obj$activation == 'logistic'){
+      activ <- logistic
+    }
+    if (obj$activation == 'relu'){
+      activ <- relu
+    }
+    if (obj$activation == 'lrelu'){
+      activ <- lrelu
+    }
     if (class(newX) != "list"){
       newX <- list(newX)
     }
