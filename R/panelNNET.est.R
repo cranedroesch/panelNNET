@@ -1,163 +1,161 @@
 
-# panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param,
-#                           parapen, penalize_toplayer, parlist, verbose,
-#                           report_interval, gravity, convtol, RMSprop, start_LR,
-#                           activation, batchsize, maxstopcounter, OLStrick, OLStrick_interval,
-#                           initialization, dropout_hidden, dropout_input, convolutional,
-#                           LR_slowing_rate, return_best, stop_early, weights, ...){
+panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, param,
+                          parapen, penalize_toplayer, parlist, verbose,
+                          report_interval, gravity, convtol, RMSprop, start_LR,
+                          activation, batchsize, maxstopcounter, OLStrick, OLStrick_interval,
+                          initialization, dropout_hidden, dropout_input, convolutional,
+                          LR_slowing_rate, return_best, stop_early, weights, ...){
 
 #######################################
 # bayesian hyperparameter search on PCs, doing the PCA train/test split appropriately
 
 
 
-rm(list=ls())
-gc()
-gc()
-"%ni%" <- Negate("%in%")
-mse <- function(x, y, narm = F){mean((x-y)^2, na.rm=narm)}
-hx <- function(x, a=6, b = 6){x[1:a, 1:b]}
-
-library(devtools)
-install_github("cranedroesch/panelNNET", ref = "master", force = F)
-library(panelNNET)
-library(doParallel)
-library(doBy)
-library(glmnet)
-library(dplyr)
-library(randomForest)
-library(splines)
-
-AWS <- grepl('ubuntu', getwd())
-desktop <- grepl(':', getwd())
-laptop <- grepl('/home/andrew', getwd())
-if(AWS){
-  setwd("/home/ubuntu/projdir")
-  system("mkdir /home/ubuntu/projdir/outdir")
-  outdir <- "/home/ubuntu/projdir/outdir"
-  registerDoParallel(detectCores())
-}
-if(desktop){
-}
-if(laptop){
-  setwd("/home/andrew/Dropbox/USDA/pnnl/data")
-  outdir <- "/home/andrew/Dropbox/USDA/pnnl/output"
-  registerDoParallel(detectCores())
-}
-cr <- "corn"
-irrdry <- "dry"
-# load data
-# if (cr == "corn"){dat <- readRDS("panel_corn.Rds")}
-# dat <- subset(dat, state %in% c("17", "19"))
-# saveRDS(dat, file = "testdat.Rds")
-dat <- readRDS("testdat.Rds")
-# dat <- subset(dat, state %in% c("17", "19", "27", "18", "39", "26", "21", "55", "29"))
-# dat <- subset(dat, state %in% c("1", "5","12", "13", "22", "28", "37", "40", "45", "47", "48", "51"))
-# irr/dry
-if (irrdry == "irr"){
-  dat <- dat[dat$prop_irr > .5,]
-  registerDoParallel(detectCores())
-} else {
-  dat <- dat[dat$prop_irr < .5,]
-  # registerDoParallel(64)
-}
-dat <- subset(dat, lon > -100)
-
+# rm(list=ls())
+# gc()
+# gc()
+# "%ni%" <- Negate("%in%")
+# mse <- function(x, y, narm = F){mean((x-y)^2, na.rm=narm)}
+# hx <- function(x, a=6, b = 6){x[1:a, 1:b]}
 # 
-if (cr == "corn"){
-  low <- 10
-  high <- 30
-}
-
-# make variabes
-dat$TAP <- rowSums(dat[,grepl('precip', colnames(dat))])/1000
-TAPspline <- ns(dat$TAP, 10)
-colnames(TAPspline) <- paste0("TAPspl", 1:10)
-dat$y <- dat$year - min(dat$year) + 1
-yearspline <- ns(dat$y, 10)
-colnames(yearspline) <- paste0("yearspl", 1:10)
-dat$light <- rowSums(dat[,grepl("sdsfia", colnames(dat))])/10000
-lgt <- model.matrix(~ns(light, df = 10):ns(lat, df = 10)-1, data = dat)
-colnames(lgt) <- paste0("lightXlat", 1:100)
-# nonparametric
-X <- dat[,grepl('year|SR|soil_|precip|sdsfia|wind|minat|maxat|minrh|maxrh|lat|lon|prop_irr',colnames(dat))]
-X <- X[sapply(X, sd) > 0]
-
-# parametric
-SR <- dat[,grepl("SR", colnames(dat))]
-SRlow <- SR[,1:grep(paste0("SR",low), colnames(SR))] %>% as.matrix
-SRmid <- SR[,grep(paste0("SR",low+1), colnames(SR)):grep(paste0("SR",high), colnames(SR))]%>% as.matrix
-SRhot <- SR[,grep(paste0("SR",high+1), colnames(SR)):grep("SR40", colnames(SR))]%>% as.matrix
-SRlow <- SRlow %*% 1:ncol(SRlow)
-SRmid <- SRmid %*% 1:ncol(SRmid)
-SRhot <- SRhot %*% 1:ncol(SRhot)
-
-Xp <- cbind(dat[,c("y", "TAP", "light")], SRlow, SRmid, SRhot, TAPspline, yearspline, lgt)
-Xp <- Xp[sapply(Xp, sd) > 0]
-nfolds <- 64
-
-g=2
-set.seed(g, kind = "L'Ecuyer-CMRG")
-samp <- sample(unique(dat$year), replace = TRUE)
-bsamp <- foreach(y = samp, .combine = c) %do% {which(dat$year == y)}
-oosamp <- unique(dat$year)[unique(dat$year) %ni% samp]
-# data frame of combinations to try
-Dlam <- 2^seq(-8, 5, by = .1)
-Dgravity <- seq(1.00001, 1.3, by = .01)
-Dstart_LR <- 10^seq(-11, -3, by = .05)
-Dbatchsize <- seq(10, 2000, by = 10)
-Dpp <- 2^seq(-10, 9, by = .1)
-DLRSR <- seq(1.1, 3, by = .01)
-Ddrop <- seq(.2, 1, by = .01)
-ns <- 6
-
-
-
-y = dat$yield[bsamp]
-X = X[bsamp,]
-hidden_units = 5:3
-fe_var = dat$fips[bsamp]
-maxit = 500
-lam = 0.0000001
-time_var = dat$year[bsamp]
-param = Xp[bsamp,]
-verbose = T
-report_interval = 1
-gravity = 1.01
-convtol = 1e-3
-activation = 'lrelu'
-start_LR = .0000001
-parlist = NULL
-OLStrick = F
-OLStrick_interval = 1
-batchsize = 320
-maxstopcounter = 25
-dropout_hidden = .5
-dropout_input = .8
-parapen = c(0,rep(1, ncol(Xp)-1))
-return_best = TRUE
-
-
-weights <- runif(length(y))^0
-
-penalize_toplayer = TRUE
-RMSprop = FALSE
-initialization = "HZRS"
-convolutional = NULL
-LR_slowing_rate = 2
-stop_early = list(check_every = 20,
-                  max_ES_stopcounter = 5,
-                  y_test = dat$yield[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]],
-                  X_test = as.matrix(X[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],]),
-                  P_test = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],]),
-                  fe_test = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]],
-                  w_test = runif(sum(dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp])))
-source("/home/andrew/Dropbox/USDA/panelNNET/R/calc_grads.R")
-source("/home/andrew/Dropbox/USDA/panelNNET/R/OLStrick.R")
-source("/home/andrew/Dropbox/USDA/panelNNET/R/getYhat.R")
-source("/home/andrew/Dropbox/USDA/panelNNET/R/predict.panelNNET.R")
-
-WEIRD BUG HERE WHERE P TEST AND X TEST DON'T HAVE THE SAME DIMENSION'
+# library(devtools)
+# install_github("cranedroesch/panelNNET", ref = "master", force = F)
+# library(panelNNET)
+# library(doParallel)
+# library(doBy)
+# library(glmnet)
+# library(dplyr)
+# library(randomForest)
+# library(splines)
+# 
+# AWS <- grepl('ubuntu', getwd())
+# desktop <- grepl(':', getwd())
+# laptop <- grepl('/home/andrew', getwd())
+# if(AWS){
+#   setwd("/home/ubuntu/projdir")
+#   system("mkdir /home/ubuntu/projdir/outdir")
+#   outdir <- "/home/ubuntu/projdir/outdir"
+#   registerDoParallel(detectCores())
+# }
+# if(desktop){
+# }
+# if(laptop){
+#   setwd("/home/andrew/Dropbox/USDA/pnnl/data")
+#   outdir <- "/home/andrew/Dropbox/USDA/pnnl/output"
+#   registerDoParallel(detectCores())
+# }
+# cr <- "corn"
+# irrdry <- "dry"
+# # load data
+# # if (cr == "corn"){dat <- readRDS("panel_corn.Rds")}
+# # dat <- subset(dat, state %in% c("17", "19"))
+# # saveRDS(dat, file = "testdat.Rds")
+# dat <- readRDS("testdat.Rds")
+# # dat <- subset(dat, state %in% c("17", "19", "27", "18", "39", "26", "21", "55", "29"))
+# # dat <- subset(dat, state %in% c("1", "5","12", "13", "22", "28", "37", "40", "45", "47", "48", "51"))
+# # irr/dry
+# if (irrdry == "irr"){
+#   dat <- dat[dat$prop_irr > .5,]
+#   registerDoParallel(detectCores())
+# } else {
+#   dat <- dat[dat$prop_irr < .5,]
+#   # registerDoParallel(64)
+# }
+# dat <- subset(dat, lon > -100)
+# 
+# # 
+# if (cr == "corn"){
+#   low <- 10
+#   high <- 30
+# }
+# 
+# # make variabes
+# dat$TAP <- rowSums(dat[,grepl('precip', colnames(dat))])/1000
+# TAPspline <- ns(dat$TAP, 10)
+# colnames(TAPspline) <- paste0("TAPspl", 1:10)
+# dat$y <- dat$year - min(dat$year) + 1
+# yearspline <- ns(dat$y, 10)
+# colnames(yearspline) <- paste0("yearspl", 1:10)
+# dat$light <- rowSums(dat[,grepl("sdsfia", colnames(dat))])/10000
+# lgt <- model.matrix(~ns(light, df = 10):ns(lat, df = 10)-1, data = dat)
+# colnames(lgt) <- paste0("lightXlat", 1:100)
+# # nonparametric
+# X <- dat[,grepl('year|SR|soil_|precip|sdsfia|wind|minat|maxat|minrh|maxrh|lat|lon|prop_irr',colnames(dat))]
+# X <- X[sapply(X, sd) > 0]
+# 
+# # parametric
+# SR <- dat[,grepl("SR", colnames(dat))]
+# SRlow <- SR[,1:grep(paste0("SR",low), colnames(SR))] %>% as.matrix
+# SRmid <- SR[,grep(paste0("SR",low+1), colnames(SR)):grep(paste0("SR",high), colnames(SR))]%>% as.matrix
+# SRhot <- SR[,grep(paste0("SR",high+1), colnames(SR)):grep("SR40", colnames(SR))]%>% as.matrix
+# SRlow <- SRlow %*% 1:ncol(SRlow)
+# SRmid <- SRmid %*% 1:ncol(SRmid)
+# SRhot <- SRhot %*% 1:ncol(SRhot)
+# 
+# Xp <- cbind(dat[,c("y", "TAP", "light")], SRlow, SRmid, SRhot, TAPspline, yearspline, lgt)
+# Xp <- Xp[sapply(Xp, sd) > 0]
+# nfolds <- 64
+# 
+# g=2
+# set.seed(g, kind = "L'Ecuyer-CMRG")
+# samp <- sample(unique(dat$year), replace = TRUE)
+# bsamp <- foreach(y = samp, .combine = c) %do% {which(dat$year == y)}
+# oosamp <- unique(dat$year)[unique(dat$year) %ni% samp]
+# # data frame of combinations to try
+# Dlam <- 2^seq(-8, 5, by = .1)
+# Dgravity <- seq(1.00001, 1.3, by = .01)
+# Dstart_LR <- 10^seq(-11, -3, by = .05)
+# Dbatchsize <- seq(10, 2000, by = 10)
+# Dpp <- 2^seq(-10, 9, by = .1)
+# DLRSR <- seq(1.1, 3, by = .01)
+# Ddrop <- seq(.2, 1, by = .01)
+# ns <- 6
+# 
+# stop_early = list(check_every = 20,
+#                   max_ES_stopcounter = 5,
+#                   y_test = dat$yield[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]],
+#                   X_test = as.matrix(X[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],]),
+#                   P_test = as.matrix(Xp[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp],]),
+#                   fe_test = dat$fips[dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp]],
+#                   w_test = runif(sum(dat$year %in% oosamp & dat$fips %in% dat$fips[dat$year %in% samp])))
+# 
+# y = dat$yield[bsamp]
+# X = X[bsamp,]
+# hidden_units = 5:3
+# fe_var = dat$fips[bsamp]
+# maxit = 500
+# lam = 0.0000001
+# time_var = dat$year[bsamp]
+# param = Xp[bsamp,]
+# verbose = T
+# report_interval = 1
+# gravity = 1.01
+# convtol = 1e-3
+# activation = 'lrelu'
+# start_LR = .0000001
+# parlist = NULL
+# OLStrick = T
+# OLStrick_interval = 1
+# batchsize = 320
+# maxstopcounter = 25
+# dropout_hidden = .5
+# dropout_input = .8
+# parapen = c(0,rep(1, ncol(Xp)-1))
+# return_best = TRUE
+# 
+# 
+# weights <- runif(length(y))^0
+# 
+# penalize_toplayer = TRUE
+# RMSprop = FALSE
+# initialization = "HZRS"
+# convolutional = NULL
+# LR_slowing_rate = 2
+# 
+# source("/home/andrew/Dropbox/USDA/panelNNET/R/calc_grads.R")
+# source("/home/andrew/Dropbox/USDA/panelNNET/R/OLStrick.R")
+# source("/home/andrew/Dropbox/USDA/panelNNET/R/getYhat.R")
+# source("/home/andrew/Dropbox/USDA/panelNNET/R/predict.panelNNET.R")
 
   ##########
   #Define internal functions
