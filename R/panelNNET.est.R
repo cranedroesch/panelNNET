@@ -654,7 +654,7 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
   attr(Pout, "scaled:center") <- attr(param, "scaled:center")
   attr(Pout, "scaled:scale") <- attr(param, "scaled:scale")
   
-  output <- list(yhat = yhat, parlist = parlist, hidden_layers = hlayers
+  output <- list(yhat = yhat, parlist = parlist
     , fe = fe_output, converged = conv, mse = mse, loss = loss, lam = lam, time_var = time_var
     , X = Xout, y = y, weights = weights, param = Pout, fe_var = fe_var, hidden_units = hidden_units, maxit = maxit
     , msevec = msevec, RMSprop = RMSprop, convtol = convtol
