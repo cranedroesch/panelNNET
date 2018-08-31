@@ -643,9 +643,20 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     fe <- (y-ydm) - MatMult(as.matrix(Z)-Zdm, as.matrix(c(parlist$beta_param, B)))
     fe_output <- data.frame(fe_var, fe)
   }
+  # lose the input data in the output to save memory, but retain the scaling attributes for the predict function
+  Xout <- foreach(i = 1:length(X)) %do% {
+    xo <- "input data removed to save memory"
+    attr(xo, "scaled:center") <- attr(X[[i]], "scaled:center")
+    attr(xo, "scaled:scale") <- attr(X[[i]], "scaled:scale")
+    xo    
+  }
+  Pout <- "input data removed to save memory"
+  attr(Pout, "scaled:center") <- attr(param, "scaled:center")
+  attr(Pout, "scaled:scale") <- attr(param, "scaled:scale")
+  
   output <- list(yhat = yhat, parlist = parlist, hidden_layers = hlayers
     , fe = fe_output, converged = conv, mse = mse, loss = loss, lam = lam, time_var = time_var
-    , X = X, y = y, weights = weights, param = param, fe_var = fe_var, hidden_units = hidden_units, maxit = maxit
+    , X = Xout, y = y, weights = weights, param = Pout, fe_var = fe_var, hidden_units = hidden_units, maxit = maxit
     , msevec = msevec, RMSprop = RMSprop, convtol = convtol
     , grads = grads, activation = activation, parapen = parapen
     , batchsize = batchsize, initialization = initialization, convolutional = convolutional
@@ -653,5 +664,4 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     , penalize_toplayer = penalize_toplayer)
   return(output) # list 
 }
-
 
