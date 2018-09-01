@@ -60,7 +60,7 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
         } else {P <- NULL}
         # compute hidden layers
         nlayers <- sapply(obj$parlist, length)
-        nlayers <- nlayers[(!grepl("param", names(nlayers)))]
+        nlayers <- nlayers[(!grepl("param", names(nlayers)))]-1 #subtrack off one because the parlist has one more element than the number of layers
         # nlayers <- nlayers[!grepl("param", names(nlayers))]
         HL <- calc_hlayers(parlist = obj$parlist, 
                            X = D, 
@@ -147,7 +147,7 @@ predfun_multinet <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param 
     activ <- lrelu
   }
   nlayers <- sapply(obj$parlist, length)
-  nlayers <- nlayers[(!grepl("param", names(nlayers)))]
+  nlayers <- nlayers[(!grepl("param", names(nlayers)))] -1
   # rescale new data to scale of training data
   D <- foreach(i = 1:length(obj$X)) %do% {
     sweep(sweep(newX[[i]], 2, STATS = attr(obj$X[[i]], "scaled:center"), FUN = '-'), 2, STATS = attr(obj$X[[i]], "scaled:scale"), FUN = '/')
