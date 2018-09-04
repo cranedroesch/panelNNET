@@ -1,8 +1,6 @@
 
 # function to compute fitted values, potentially for subsets of the data
 getYhat <- function(pl, hlay, param, y, ydm, fe_var, nlayers, weights){ 
-# pl = parlist
-# hlay = hlayers
   Z <- foreach(i = 1:length(nlayers), .combine = cbind) %do% {
     hlay[[i]][[length(hlay[[i]])]]
   }

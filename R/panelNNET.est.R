@@ -230,6 +230,10 @@ panelNNET.est <- function(y, X, hidden_units, fe_var, maxit, lam, time_var, para
     weights <- y^0
   } else {
     weights <- weights/sum(weights)*length(weights)    
+    if (any(weights == 0)){
+      weights[weights == 0] <- 1e-60 # demeanlist from lfe chokes with weights that are exactly zero.  
+      print('some zero weights got coerced to 1e-60')
+    }
   }
   if (activation == 'tanh'){
     activ <- tanh
