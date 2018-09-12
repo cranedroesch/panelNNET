@@ -191,7 +191,7 @@ predfun_multinet <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param 
   }
   #otherwise...
   if (return_fe == TRUE){
-    return(data.frame(yhat, fe = nd$fe, fx = nd$fx))
+    return(data.frame(yhat, fe = nd$fe, fx = nd$xpart))
   } else {
     return(yhat)    
   }
