@@ -4,13 +4,14 @@
 
 predict.panelNNET <-
 function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.fit = FALSE
-         , numerical_jacobian = FALSE, parallel_jacobian = FALSE, convolutional = NULL, new.weights = NULL){
-# obj = pr_obj
-# y_test = stop_early$y_test
-# newX = stop_early$X_test
-# fe.newX = stop_early$fe_test
-# new.param = stop_early$P_test
-# new.weights <- stop_early$w_test
+         , numerical_jacobian = FALSE, parallel_jacobian = FALSE, convolutional = NULL, new.weights = NULL, return_fe = FALSE){
+# mix = 4
+# obj = compmods[[mix]]
+# newX = as.matrix(X[bsamp,])
+# new.param = as.matrix(Xp[bsamp,])
+# fe.newX = dat$fips[bsamp]
+# y_test = dat$yield[bsamp]
+# new.weights = NULL
   if (is.null(newX)){
     return(obj$yhat)
   } else {
@@ -85,7 +86,7 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
     } else {FEs_to_merge <- NULL}
     #(predfun is defined below)
     yhat <- predfun_multinet(plist = plist, obj = obj, newX = newX, fe.newX = fe.newX
-                    , new.param = new.param, FEs_to_merge = FEs_to_merge) 
+                    , new.param = new.param, FEs_to_merge = FEs_to_merge, return_fe = return_fe) 
     if (se.fit == FALSE){
       return(yhat)
     } else {
@@ -133,7 +134,7 @@ function(obj, y_test = NULL, newX = NULL, fe.newX = NULL, new.param = NULL, se.f
 
 #prediction function,
 predfun_multinet <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param = NULL,
-                    FEs_to_merge = NULL, return_toplayer = FALSE, convolutional = NULL){
+                    FEs_to_merge = NULL, return_toplayer = FALSE, convolutional = NULL, return_fe = NULL){
   if (obj$activation == 'tanh'){
     activ <- tanh
   }
@@ -189,7 +190,11 @@ predfun_multinet <- function(plist, obj, newX = NULL, fe.newX = NULL, new.param 
     yhat <- nd$fe + nd$xpart
   }
   #otherwise...
-  return(yhat)
+  if (return_fe == TRUE){
+    return(data.frame(yhat, fe = nd$fe, fx = nd$fx))
+  } else {
+    return(yhat)    
+  }
 }
 
 
